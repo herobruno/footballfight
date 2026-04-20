@@ -1,0 +1,39 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>FutebolFight — Arena de Combate</title>
+    <meta name="description" content="FutebolFight: modalidade híbrida extrema de futebol e luta. Domine a arena!" />
+    <link rel="preconnect" href="https://fonts.googleapis.com" />
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+    <link href="https://fonts.googleapis.com/css2?family=Outfit:wght@400;600;700;900&family=Orbitron:wght@500;700;900&display=swap" rel="stylesheet" />
+    <style>
+      * { margin: 0; padding: 0; box-sizing: border-box; }
+      body {
+        background: #0a0a0f;
+        overflow: hidden;
+        display: flex;
+        justify-content: center;
+        align-items: center;
+        width: 100vw;
+        height: 100vh;
+        font-family: 'Outfit', sans-serif;
+      }
+      #game-container {
+        position: relative;
+        width: 1280px;
+        height: 720px;
+      }
+      #game-container canvas {
+        display: block;
+        border-radius: 12px;
+        box-shadow: 0 0 60px rgba(0,200,255,0.15), 0 0 120px rgba(0,100,200,0.08);
+      }
+    </style>
+  </head>
+  <body>
+    <div id="game-container"></div>
+    <script type="module" src="/src/main.ts"></script>
+  </body>
+</html>

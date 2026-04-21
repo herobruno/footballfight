@@ -24,7 +24,7 @@ export class CenaMenu extends Phaser.Scene {
       duration: 20000,
       repeat: -1,
       onUpdate: (tween) => {
-        this._desenharFundo(fundo, tween.getValue());
+        this._desenharFundo(fundo, tween.getValue() as number);
       },
     });
 

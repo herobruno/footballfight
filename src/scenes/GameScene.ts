@@ -1,13 +1,3 @@
-// ─────────────────────────────────────────────────────
-// FutebolFight — Cena do Jogo (Sprint 1: O Alicerce)
-// ─────────────────────────────────────────────────────
-// Implementa SOMENTE Sprint 1:
-//   ✓ Locomoção Base (andar, pular, correr)
-//   ✓ HUD de Vigor Dinâmico (estamina)
-//   ✓ Ciclo de Horário (Manhã / Golden Hour / Noite)
-//   ✓ Animação "Ofegante" (vigor zerado)
-// ─────────────────────────────────────────────────────
-
 import Phaser from 'phaser';
 import {
   LARGURA_JOGO, ALTURA_JOGO, CHAO_Y,

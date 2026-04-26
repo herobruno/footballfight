@@ -9,7 +9,7 @@ const configuracao: Phaser.Types.Core.GameConfig = {
   width: 1280,
   height: 720,
   parent: 'game-container',
-  backgroundColor: '#0a0a0f',
+  backgroundColor: '#000000',
   physics: {
     default: 'arcade',
     arcade: {
@@ -19,11 +19,11 @@ const configuracao: Phaser.Types.Core.GameConfig = {
   },
   scene: [CenaInicializacao, CenaMenu, CenaSelecaoUniforme, CenaJogo],
   render: {
-    pixelArt: false,
-    antialias: true,
+    pixelArt: true,
+    antialias: false,
   },
   scale: {
-    mode: Phaser.Scale.FIT,
+    mode: Phaser.Scale.NONE,
     autoCenter: Phaser.Scale.CENTER_BOTH,
   },
 };

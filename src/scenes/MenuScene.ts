@@ -1,5 +1,6 @@
 // ─────────────────────────────────────
 // FutebolFight — Cena do Menu Principal
+// Estilo PS1: Verde, Branco, Marrom, Preto
 // ─────────────────────────────────────
 
 import Phaser from 'phaser';
@@ -14,93 +15,57 @@ export class CenaMenu extends Phaser.Scene {
   }
 
   create(): void {
-    // ── Fundo gradiente animado ──────────────
+    // ── Fundo Gradiente Estilo PS1 (Verde e Marrom) ──────────────
     const fundo = this.add.graphics();
-    this._desenharFundo(fundo, 0);
+    this._desenharFundo(fundo);
 
-    this.tweens.addCounter({
-      from: 0,
-      to: 360,
-      duration: 20000,
-      repeat: -1,
-      onUpdate: (tween) => {
-        this._desenharFundo(fundo, tween.getValue() as number);
-      },
-    });
-
-    // ── Partículas flutuantes ────────────────
+    // ── Partículas de "Grama/Terra" ────────────────
     this.particulasGfx = this.add.graphics();
-    for (let i = 0; i < 50; i++) {
+    for (let i = 0; i < 40; i++) {
       this.particulas.push({
         x: Math.random() * LARGURA_JOGO,
         y: Math.random() * ALTURA_JOGO,
-        vx: (Math.random() - 0.5) * 0.6,
-        vy: (Math.random() - 0.5) * 0.4 - 0.3,
-        alfa: Math.random() * 0.4 + 0.1,
-        tamanho: Math.random() * 3 + 1,
+        vx: (Math.random() - 0.5) * 0.4,
+        vy: Math.random() * 0.2 + 0.1,
+        alfa: Math.random() * 0.5 + 0.5,
+        tamanho: Math.random() * 4 + 2,
       });
     }
 
     // ── Título ───────────────────────────────
-    const tituloY = 180;
+    const tituloY = 200;
 
-    // Brilho atrás do título
-    const brilho = this.add.text(LARGURA_JOGO / 2, tituloY, 'FUTEBOL\nFIGHT', {
+    // Sombra do Título (Preto)
+    this.add.text(LARGURA_JOGO / 2 + 4, tituloY + 4, 'FUTEBOL\nFIGHT', {
       fontFamily: 'Orbitron, monospace',
-      fontSize: '72px',
-      fontStyle: 'bold',
-      color: '#42a5f5',
+      fontSize: '80px',
+      fontStyle: '900',
+      color: '#000000',
       align: 'center',
-      lineSpacing: 8,
-    }).setOrigin(0.5).setAlpha(0.3).setScale(1.05);
+      lineSpacing: 10,
+    }).setOrigin(0.5);
 
-    this.tweens.add({
-      targets: brilho,
-      alpha: 0.15,
-      scaleX: 1.08,
-      scaleY: 1.08,
-      duration: 2000,
-      yoyo: true,
-      repeat: -1,
-      ease: 'Sine.easeInOut',
-    });
-
+    // Título Principal (Branco)
     const titulo = this.add.text(LARGURA_JOGO / 2, tituloY, 'FUTEBOL\nFIGHT', {
       fontFamily: 'Orbitron, monospace',
-      fontSize: '72px',
-      fontStyle: 'bold',
+      fontSize: '80px',
+      fontStyle: '900',
       color: '#ffffff',
       align: 'center',
-      lineSpacing: 8,
-      stroke: '#1565c0',
-      strokeThickness: 3,
+      lineSpacing: 10,
     }).setOrigin(0.5);
-
-    // Flutuação suave
-    this.tweens.add({
-      targets: titulo,
-      y: tituloY - 6,
-      duration: 3000,
-      yoyo: true,
-      repeat: -1,
-      ease: 'Sine.easeInOut',
-    });
 
     // ── Subtítulo ────────────────────────────
-    this.add.text(LARGURA_JOGO / 2, tituloY + 90, 'ARENA DE COMBATE', {
-      fontFamily: 'Outfit, sans-serif',
-      fontSize: '18px',
-      color: '#8899aa',
-      letterSpacing: 12,
+    this.add.text(LARGURA_JOGO / 2, tituloY + 110, 'ARENA DE COMBATE', {
+      fontFamily: 'Orbitron, monospace',
+      fontSize: '20px',
+      color: '#ffffff',
+      backgroundColor: '#000000',
+      padding: { x: 10, y: 5 },
     }).setOrigin(0.5);
 
-    // ── Linha decorativa ─────────────────────
-    const linhaGfx = this.add.graphics();
-    linhaGfx.lineStyle(2, 0x42a5f5, 0.4);
-    linhaGfx.lineBetween(LARGURA_JOGO / 2 - 160, tituloY + 120, LARGURA_JOGO / 2 + 160, tituloY + 120);
-
-    // ── Botão Iniciar ────────────────────────
-    this._criarBotao(LARGURA_JOGO / 2, 440, 'INICIAR PARTIDA', 0x1565c0, () => {
+    // ── Botão Iniciar (Estilo PS1 - Bloco) ────────────────────────
+    this._criarBotao(LARGURA_JOGO / 2, 460, 'INICIAR JOGO', 0x27ae60, () => {
       this.cameras.main.fade(400, 0, 0, 0, false, (_cam: Phaser.Cameras.Scene2D.Camera, progresso: number) => {
         if (progresso >= 1) {
           this.scene.start('CenaSelecaoUniforme');
@@ -108,30 +73,28 @@ export class CenaMenu extends Phaser.Scene {
       });
     });
 
-    // ── Versão/crédito ───────────────────────
-    this.add.text(LARGURA_JOGO / 2, ALTURA_JOGO - 30, 'Sprint 1 — O Alicerce  •  v0.1.0', {
-      fontFamily: 'Outfit, sans-serif',
-      fontSize: '12px',
-      color: '#445566',
+    // ── Créditos ───────────────────────
+    this.add.text(LARGURA_JOGO / 2, ALTURA_JOGO - 40, '© 1998 DEEPMIND GAMES - LICENSED BY PS1', {
+      fontFamily: 'monospace',
+      fontSize: '14px',
+      color: '#ffffff',
     }).setOrigin(0.5);
 
-    // ── Fade in ──────────────────────────────
-    this.cameras.main.fadeIn(600, 0, 0, 0);
+    this.cameras.main.fadeIn(500, 0, 0, 0);
 
-    // ── Loop de atualização para partículas ──
     this.events.on('update', this._atualizarParticulas, this);
   }
 
-  private _desenharFundo(gfx: Phaser.GameObjects.Graphics, mudancaCor: number): void {
+  private _desenharFundo(gfx: Phaser.GameObjects.Graphics): void {
     gfx.clear();
-    const passos = 40;
+    // Gradiente seco entre verde grama e preto/marrom
+    const passos = 10; // Menos passos para look mais posterizado/PS1
     for (let i = 0; i < passos; i++) {
       const t = i / passos;
-      const r = Math.floor(Phaser.Math.Linear(8, 14, t));
-      const g = Math.floor(Phaser.Math.Linear(10, 18, t));
-      const b = Math.floor(Phaser.Math.Linear(20, 40 + Math.sin(mudancaCor * 0.0174) * 10, t));
-      const cor = (r << 16) | (g << 8) | b;
-      gfx.fillStyle(cor, 1);
+      const r = Math.floor(Phaser.Math.Linear(10, 46, t));
+      const g = Math.floor(Phaser.Math.Linear(60, 20, t));
+      const b = Math.floor(Phaser.Math.Linear(20, 10, t));
+      gfx.fillStyle((r << 16) | (g << 8) | b, 1);
       gfx.fillRect(0, (ALTURA_JOGO / passos) * i, LARGURA_JOGO, ALTURA_JOGO / passos + 1);
     }
   }
@@ -139,71 +102,55 @@ export class CenaMenu extends Phaser.Scene {
   private _atualizarParticulas(): void {
     this.particulasGfx.clear();
     for (const p of this.particulas) {
-      p.x += p.vx;
       p.y += p.vy;
-      if (p.y < -10) p.y = ALTURA_JOGO + 10;
-      if (p.x < -10) p.x = LARGURA_JOGO + 10;
-      if (p.x > LARGURA_JOGO + 10) p.x = -10;
-      this.particulasGfx.fillStyle(0x42a5f5, p.alfa);
-      this.particulasGfx.fillCircle(p.x, p.y, p.tamanho);
+      if (p.y > ALTURA_JOGO) p.y = -10;
+      // Partículas quadradas (pixeladas)
+      this.particulasGfx.fillStyle(0xffffff, p.alfa);
+      this.particulasGfx.fillRect(p.x, p.y, p.tamanho, p.tamanho);
     }
   }
 
   private _criarBotao(x: number, y: number, rotulo: string, cor: number, aoClicar: () => void): void {
-    const larg = 320;
-    const alt = 56;
-
+    const larg = 300;
+    const alt = 60;
     const container = this.add.container(x, y);
 
-    // Fundo do botão
-    const fundoGfx = this.add.graphics();
-    fundoGfx.fillStyle(cor, 0.9);
-    fundoGfx.fillRoundedRect(-larg / 2, -alt / 2, larg, alt, 12);
-    fundoGfx.lineStyle(2, 0x42a5f5, 0.5);
-    fundoGfx.strokeRoundedRect(-larg / 2, -alt / 2, larg, alt, 12);
-
-    // Brilho no topo
-    const brilhoGfx = this.add.graphics();
-    brilhoGfx.fillStyle(0xffffff, 0.08);
-    brilhoGfx.fillRoundedRect(-larg / 2 + 2, -alt / 2 + 2, larg - 4, alt / 2 - 2, { tl: 10, tr: 10, bl: 0, br: 0 });
+    // Botão estilo PS1: Borda branca grossa, fundo preto/verde
+    const fundo = this.add.graphics();
+    fundo.fillStyle(0x000000, 1);
+    fundo.fillRect(-larg/2, -alt/2, larg, alt);
+    fundo.lineStyle(4, 0xffffff, 1);
+    fundo.strokeRect(-larg/2, -alt/2, larg, alt);
 
     const texto = this.add.text(0, 0, rotulo, {
       fontFamily: 'Orbitron, monospace',
-      fontSize: '18px',
+      fontSize: '22px',
       color: '#ffffff',
       fontStyle: 'bold',
     }).setOrigin(0.5);
 
-    container.add([fundoGfx, brilhoGfx, texto]);
+    container.add([fundo, texto]);
     container.setSize(larg, alt);
     container.setInteractive({ useHandCursor: true });
 
     container.on('pointerover', () => {
-      this.tweens.add({ targets: container, scaleX: 1.05, scaleY: 1.05, duration: 150, ease: 'Back.easeOut' });
-      texto.setColor('#e3f2fd');
-    });
-    container.on('pointerout', () => {
-      this.tweens.add({ targets: container, scaleX: 1, scaleY: 1, duration: 150, ease: 'Back.easeOut' });
-      texto.setColor('#ffffff');
-    });
-    container.on('pointerdown', () => {
-      this.tweens.add({ targets: container, scaleX: 0.95, scaleY: 0.95, duration: 80 });
-    });
-    container.on('pointerup', () => {
-      this.tweens.add({ targets: container, scaleX: 1.05, scaleY: 1.05, duration: 80 });
-      aoClicar();
+      fundo.clear();
+      fundo.fillStyle(0x27ae60, 1); // Verde ao passar o mouse
+      fundo.fillRect(-larg/2, -alt/2, larg, alt);
+      fundo.lineStyle(4, 0xffffff, 1);
+      fundo.strokeRect(-larg/2, -alt/2, larg, alt);
     });
 
-    // Animação de entrada
-    container.setAlpha(0).setScale(0.8);
-    this.tweens.add({
-      targets: container,
-      alpha: 1,
-      scaleX: 1,
-      scaleY: 1,
-      duration: 600,
-      delay: 400,
-      ease: 'Back.easeOut',
+    container.on('pointerout', () => {
+      fundo.clear();
+      fundo.fillStyle(0x000000, 1);
+      fundo.fillRect(-larg/2, -alt/2, larg, alt);
+      fundo.lineStyle(4, 0xffffff, 1);
+      fundo.strokeRect(-larg/2, -alt/2, larg, alt);
+    });
+
+    container.on('pointerdown', () => {
+      aoClicar();
     });
   }
 }

@@ -1,6 +1,6 @@
 // ─────────────────────────────────────────────
 // FutebolFight — Cena de Seleção de Uniforme
-// Sprint 1: Seleção de Uniforme + Ciclo de Horário
+// Layout em 3 colunas — PS1 Style
 // ─────────────────────────────────────────────
 
 import Phaser from 'phaser';
@@ -14,11 +14,10 @@ import { obterEstado, definirUniformeJogador1, definirCicloHorario } from '../es
 export class CenaSelecaoUniforme extends Phaser.Scene {
   private uniformeSelecionado: OpcaoUniforme = UNIFORMES[0];
   private cicloSelecionado: PresetHorario = CICLOS_HORARIO[0];
-  private spritePreview!: Phaser.GameObjects.Image;
-  private fundoPreview!: Phaser.GameObjects.Graphics;
+  private spritePreview!: Phaser.GameObjects.Sprite;
+  private spriteOponente!: Phaser.GameObjects.Sprite;
   private cartoesUniforme: Phaser.GameObjects.Container[] = [];
   private cartoesCiclo: Phaser.GameObjects.Container[] = [];
-  private spriteOponente!: Phaser.GameObjects.Image;
 
   constructor() {
     super({ key: 'CenaSelecaoUniforme' });
@@ -29,190 +28,164 @@ export class CenaSelecaoUniforme extends Phaser.Scene {
     this.uniformeSelecionado = estado.uniformeJogador1;
     this.cicloSelecionado = estado.cicloHorario;
 
-    // ── Fundo ────────────────────────────────
-    this._desenharFundo();
+    // ── Fundo ─────────────────────────────────
+    this.add.rectangle(0, 0, LARGURA_JOGO, ALTURA_JOGO, 0x0a2a0a).setOrigin(0, 0);
 
-    // ── Título ───────────────────────────────
-    this.add.text(LARGURA_JOGO / 2, 40, 'SELEÇÃO DE UNIFORME', {
+    // ── Título Topo ───────────────────────────
+    const headerH = 80;
+    this.add.rectangle(LARGURA_JOGO / 2, headerH / 2, LARGURA_JOGO, headerH, 0x000000).setOrigin(0.5, 0.5);
+    this.add.text(LARGURA_JOGO / 2, headerH / 2, 'SELEÇÃO DE ATLETAS', {
       fontFamily: 'Orbitron, monospace',
-      fontSize: '28px',
-      fontStyle: 'bold',
+      fontSize: '36px',
       color: '#ffffff',
-      stroke: '#1565c0',
-      strokeThickness: 2,
-    }).setOrigin(0.5);
+    }).setOrigin(0.5, 0.5);
 
-    // Linha decorativa
-    const linhaGfx = this.add.graphics();
-    linhaGfx.lineStyle(2, 0x42a5f5, 0.3);
-    linhaGfx.lineBetween(LARGURA_JOGO / 2 - 200, 65, LARGURA_JOGO / 2 + 200, 65);
+    // Linha divisória
+    this.add.rectangle(LARGURA_JOGO / 2, headerH, LARGURA_JOGO, 4, 0xffffff).setOrigin(0.5, 0.5);
 
-    // ── Cartões de Uniforme ──────────────────
-    this.add.text(200, 100, 'ESCOLHA SEU TIME', {
-      fontFamily: 'Outfit, sans-serif',
-      fontSize: '16px',
-      color: '#8899aa',
-      letterSpacing: 4,
-    }).setOrigin(0.5);
+    // ─────────────────────────────────────────
+    // Layout em 3 zonas horizontais:
+    // [  TIMES  ] [   VS PREVIEW   ] [ CLIMA ]
+    // X: 0-380    X: 380-900         X: 900-1280
+    // ─────────────────────────────────────────
+
+    const zonaEsq  = { x: 0,   larg: 380 };
+    const zonaC    = { x: 380, larg: 520 };
+    const zonaDir  = { x: 900, larg: 380 };
+    const conteudoY = headerH + 20;
+    const alturaUtil = ALTURA_JOGO - headerH - 100; // desconta header e rodapé
+
+    // ── COLUNA ESQUERDA — Times ───────────────
+    this._desenharSeparador(zonaEsq.x, zonaEsq.x + zonaEsq.larg, 'ESCOLHER TIME', conteudoY);
+
+    const cartaoLarg = 160;
+    const cartaoAlt  = 220;
+    const gap = 20;
+    const totalTimesLarg = UNIFORMES.length * cartaoLarg + (UNIFORMES.length - 1) * gap;
+    const timesStartX = zonaEsq.x + (zonaEsq.larg - totalTimesLarg) / 2;
+    const timesY = conteudoY + 60;
 
     UNIFORMES.forEach((u, i) => {
-      const cartao = this._criarCartaoUniforme(80 + i * 240, 200, u);
+      const cx = timesStartX + i * (cartaoLarg + gap);
+      const cartao = this._criarCartaoUniforme(cx, timesY, cartaoLarg, cartaoAlt, u);
       this.cartoesUniforme.push(cartao);
     });
 
-    // ── Preview dos Jogadores ────────────────
-    this.add.text(LARGURA_JOGO / 2, 100, 'PREVIEW', {
-      fontFamily: 'Outfit, sans-serif',
-      fontSize: '16px',
-      color: '#8899aa',
-      letterSpacing: 4,
-    }).setOrigin(0.5);
+    // ── COLUNA CENTRAL — Preview VS ───────────
+    const previewCX = zonaC.x + zonaC.larg / 2;
+    const previewY  = conteudoY + alturaUtil / 2 - 20;
 
-    // Área de preview com fundo
-    this.fundoPreview = this.add.graphics();
-    this._desenharFundoPreview();
+    this.add.rectangle(previewCX, previewY, zonaC.larg - 40, alturaUtil - 20, 0x000000, 0.5)
+      .setStrokeStyle(4, 0xffffff);
 
-    // Rótulo VS
-    this.add.text(LARGURA_JOGO / 2, 280, 'VS', {
+    // Label VS
+    this.add.text(previewCX, previewY - 20, 'VS', {
       fontFamily: 'Orbitron, monospace',
-      fontSize: '32px',
-      fontStyle: 'bold',
-      color: '#ff6f00',
+      fontSize: '64px',
+      color: '#ffffff',
       stroke: '#000000',
-      strokeThickness: 3,
-    }).setOrigin(0.5).setAlpha(0.8);
+      strokeThickness: 8,
+    }).setOrigin(0.5);
 
-    // Preview Jogador 1
-    this.spritePreview = this.add.image(LARGURA_JOGO / 2 - 80, 280, `jogador_${this.uniformeSelecionado.id}`)
-      .setScale(2.5)
-      .setOrigin(0.5);
+    // Labels J1 / J2
+    this.add.text(previewCX - 110, previewY + 100, 'JOGADOR 1', {
+      fontFamily: 'Orbitron, monospace', fontSize: '14px', color: '#2ecc71',
+    }).setOrigin(0.5);
+    this.add.text(previewCX + 110, previewY + 100, 'CPU / J2', {
+      fontFamily: 'Orbitron, monospace', fontSize: '14px', color: '#8d6e63',
+    }).setOrigin(0.5);
 
-    // Preview Oponente
+    // Sprites dos jogadores
+    this.spritePreview = this.add.sprite(previewCX - 110, previewY - 20, 'player_sheet').setScale(3);
+    this.spritePreview.setTint(this.uniformeSelecionado.corPrimaria);
+    this.spritePreview.play('player_idle');
+
     const oponente = UNIFORMES.find(u => u.id !== this.uniformeSelecionado.id) || UNIFORMES[1];
-    this.spriteOponente = this.add.image(LARGURA_JOGO / 2 + 80, 280, `jogador_${oponente.id}`)
-      .setScale(2.5)
-      .setOrigin(0.5)
-      .setFlipX(true);
+    this.spriteOponente = this.add.sprite(previewCX + 110, previewY - 20, 'player_sheet').setScale(3).setFlipX(true);
+    this.spriteOponente.setTint(oponente.corPrimaria);
+    this.spriteOponente.play('player_idle');
 
-    // Rótulos dos jogadores
-    this.add.text(LARGURA_JOGO / 2 - 80, 360, 'JOGADOR 1', {
-      fontFamily: 'Outfit, sans-serif',
-      fontSize: '12px',
-      color: '#66aadd',
-    }).setOrigin(0.5);
+    // ── COLUNA DIREITA — Clima ────────────────
+    this._desenharSeparador(zonaDir.x, zonaDir.x + zonaDir.larg, 'CONDIÇÃO DO CLIMA', conteudoY);
 
-    this.add.text(LARGURA_JOGO / 2 + 80, 360, 'CPU / J2', {
-      fontFamily: 'Outfit, sans-serif',
-      fontSize: '12px',
-      color: '#aa6666',
-    }).setOrigin(0.5);
-
-    // Animação de flutuação
-    this.tweens.add({
-      targets: [this.spritePreview, this.spriteOponente],
-      y: '-=6',
-      duration: 1500,
-      yoyo: true,
-      repeat: -1,
-      ease: 'Sine.easeInOut',
-    });
-
-    // ── Seleção de Ciclo de Horário ──────────
-    this.add.text(LARGURA_JOGO - 200, 100, 'HORÁRIO', {
-      fontFamily: 'Outfit, sans-serif',
-      fontSize: '16px',
-      color: '#8899aa',
-      letterSpacing: 4,
-    }).setOrigin(0.5);
+    const climaCardLarg = 90;
+    const climaCardAlt  = 140;
+    const climaGap = 15;
+    const totalClimaLarg = CICLOS_HORARIO.length * climaCardLarg + (CICLOS_HORARIO.length - 1) * climaGap;
+    const climaStartX = zonaDir.x + (zonaDir.larg - totalClimaLarg) / 2;
+    const climaY = conteudoY + 60;
 
     CICLOS_HORARIO.forEach((ciclo, i) => {
-      const cartao = this._criarCartaoCiclo(LARGURA_JOGO - 320 + i * 120, 200, ciclo);
+      const cx = climaStartX + i * (climaCardLarg + climaGap);
+      const cartao = this._criarCartaoCiclo(cx, climaY, climaCardLarg, climaCardAlt, ciclo);
       this.cartoesCiclo.push(cartao);
     });
 
-    // ── Dicas de controles ───────────────────
-    const controlesY = 440;
-    this.add.text(LARGURA_JOGO / 2, controlesY, '─── CONTROLES ───', {
-      fontFamily: 'Outfit, sans-serif',
-      fontSize: '14px',
-      color: '#556677',
-      letterSpacing: 6,
-    }).setOrigin(0.5);
+    // ── Rodapé: Botão Iniciar + Voltar ────────
+    const rodapeY = ALTURA_JOGO - 55;
 
-    const controles = [
-      ['A / D  ou  ← / →', 'Mover'],
-      ['W  ou  ↑', 'Pular'],
-      ['SHIFT', 'Correr'],
-    ];
+    this.add.rectangle(LARGURA_JOGO / 2, ALTURA_JOGO - rodapeY / 2, LARGURA_JOGO, 4, 0xffffff)
+      .setOrigin(0.5, 0.5);
 
-    controles.forEach(([tecla, descricao], i) => {
-      const linha = controlesY + 30 + i * 28;
-      this.add.text(LARGURA_JOGO / 2 - 120, linha, tecla, {
-        fontFamily: 'Orbitron, monospace',
-        fontSize: '13px',
-        color: '#42a5f5',
-      }).setOrigin(0, 0.5);
-      this.add.text(LARGURA_JOGO / 2 + 120, linha, descricao, {
-        fontFamily: 'Outfit, sans-serif',
-        fontSize: '13px',
-        color: '#778899',
-      }).setOrigin(1, 0.5);
-    });
+    this._criarBotaoIniciar(LARGURA_JOGO / 2, ALTURA_JOGO - 45);
 
-    // ── Botão Entrar na Arena ─────────────────
-    this._criarBotaoIniciar(LARGURA_JOGO / 2, ALTURA_JOGO - 60);
-
-    // ── Botão Voltar ─────────────────────────
-    const botaoVoltar = this.add.text(60, ALTURA_JOGO - 30, '← VOLTAR', {
-      fontFamily: 'Outfit, sans-serif',
-      fontSize: '14px',
-      color: '#556677',
-    }).setOrigin(0.5).setInteractive({ useHandCursor: true });
-    botaoVoltar.on('pointerover', () => botaoVoltar.setColor('#aabbcc'));
-    botaoVoltar.on('pointerout', () => botaoVoltar.setColor('#556677'));
-    botaoVoltar.on('pointerup', () => {
+    const voltar = this.add.text(80, ALTURA_JOGO - 45, '◄ VOLTAR', {
+      fontFamily: 'Orbitron, monospace', fontSize: '18px', color: '#ffffff',
+    }).setOrigin(0, 0.5).setInteractive({ useHandCursor: true });
+    voltar.on('pointerover', () => voltar.setColor('#27ae60'));
+    voltar.on('pointerout',  () => voltar.setColor('#ffffff'));
+    voltar.on('pointerup',   () => {
       this.cameras.main.fade(300, 0, 0, 0, false, (_c: Phaser.Cameras.Scene2D.Camera, p: number) => {
         if (p >= 1) this.scene.start('CenaMenu');
       });
     });
 
-    // ── Fade in ──────────────────────────────
+    // Separadores verticais
+    this.add.rectangle(zonaC.x, ALTURA_JOGO / 2, 3, ALTURA_JOGO - headerH, 0xffffff, 0.2).setOrigin(0.5);
+    this.add.rectangle(zonaDir.x, ALTURA_JOGO / 2, 3, ALTURA_JOGO - headerH, 0xffffff, 0.2).setOrigin(0.5);
+
     this.cameras.main.fadeIn(400, 0, 0, 0);
     this._destacarSelecionados();
+
+    this.input.keyboard?.addKey('ESC').on('down', () => this.scene.start('CenaMenu'));
   }
 
-  // ─── Cartão de Uniforme ──────────────────
-  private _criarCartaoUniforme(x: number, y: number, uniforme: OpcaoUniforme): Phaser.GameObjects.Container {
-    const larg = 200;
-    const alt = 200;
+  // ─── Helpers de UI ───────────────────────────
+
+  private _desenharSeparador(x1: number, x2: number, label: string, y: number): void {
+    const cx = (x1 + x2) / 2;
+    this.add.text(cx, y + 28, label, {
+      fontFamily: 'Orbitron, monospace',
+      fontSize: '18px',
+      color: '#ffffff',
+    }).setOrigin(0.5);
+    this.add.rectangle(cx, y + 52, (x2 - x1) * 0.7, 3, 0xffffff, 0.4).setOrigin(0.5);
+  }
+
+  private _criarCartaoUniforme(
+    x: number, y: number, larg: number, alt: number, uniforme: OpcaoUniforme
+  ): Phaser.GameObjects.Container {
     const container = this.add.container(x, y);
 
-    // Fundo do cartão
-    const fundoCartao = this.add.graphics();
-    fundoCartao.fillStyle(0x111122, 0.9);
-    fundoCartao.fillRoundedRect(0, 0, larg, alt, 12);
-    fundoCartao.lineStyle(2, 0x222244, 0.6);
-    fundoCartao.strokeRoundedRect(0, 0, larg, alt, 12);
+    const fundo = this.add.graphics();
+    fundo.fillStyle(0x000000, 1);
+    fundo.fillRect(0, 0, larg, alt);
+    fundo.lineStyle(4, 0xffffff, 1);
+    fundo.strokeRect(0, 0, larg, alt);
 
-    // Amostra de cor
-    const amostra = this.add.graphics();
-    amostra.fillStyle(uniforme.corPrimaria, 1);
-    amostra.fillRoundedRect(20, 20, larg - 40, 60, 8);
-    amostra.fillStyle(uniforme.corSecundaria, 0.3);
-    amostra.fillRect(20, 50, larg - 40, 10);
+    const sprite = this.add.sprite(larg / 2, alt * 0.42, 'player_sheet').setScale(2);
+    sprite.setTint(uniforme.corPrimaria);
+    sprite.play('player_idle');
 
-    // Sprite no cartão
-    const sprite = this.add.image(larg / 2, 120, `jogador_${uniforme.id}`).setScale(1.5);
-
-    // Nome do time
-    const nome = this.add.text(larg / 2, alt - 25, uniforme.rotuloPt, {
-      fontFamily: 'Outfit, sans-serif',
-      fontSize: '14px',
-      color: '#ccddee',
-      fontStyle: 'bold',
+    const nome = this.add.text(larg / 2, alt - 28, uniforme.rotuloPt.toUpperCase(), {
+      fontFamily: 'Orbitron, monospace',
+      fontSize: '12px',
+      color: '#ffffff',
+      align: 'center',
+      wordWrap: { width: larg - 16 },
     }).setOrigin(0.5);
 
-    container.add([fundoCartao, amostra, sprite, nome]);
+    container.add([fundo, sprite, nome]);
     container.setSize(larg, alt);
     container.setInteractive({ useHandCursor: true });
     container.setData('uniforme', uniforme);
@@ -223,59 +196,36 @@ export class CenaSelecaoUniforme extends Phaser.Scene {
       this._atualizarPreview();
       this._destacarSelecionados();
     });
-
-    container.on('pointerover', () => {
-      this.tweens.add({ targets: container, scaleX: 1.04, scaleY: 1.04, duration: 150, ease: 'Back.easeOut' });
-    });
-    container.on('pointerout', () => {
-      this.tweens.add({ targets: container, scaleX: 1, scaleY: 1, duration: 150 });
-    });
+    container.on('pointerover', () => this.tweens.add({ targets: container, scaleY: 1.03, scaleX: 1.03, duration: 100 }));
+    container.on('pointerout',  () => this.tweens.add({ targets: container, scaleY: 1, scaleX: 1, duration: 100 }));
 
     return container;
   }
 
-  // ─── Cartão de Ciclo Horário ─────────────
-  private _criarCartaoCiclo(x: number, y: number, ciclo: PresetHorario): Phaser.GameObjects.Container {
-    const larg = 100;
-    const alt = 130;
+  private _criarCartaoCiclo(
+    x: number, y: number, larg: number, alt: number, ciclo: PresetHorario
+  ): Phaser.GameObjects.Container {
     const container = this.add.container(x, y);
 
     const fundo = this.add.graphics();
-    fundo.fillStyle(0x111122, 0.9);
-    fundo.fillRoundedRect(0, 0, larg, alt, 10);
-    fundo.lineStyle(2, 0x222244, 0.6);
-    fundo.strokeRoundedRect(0, 0, larg, alt, 10);
+    fundo.fillStyle(0x000000, 1);
+    fundo.fillRect(0, 0, larg, alt);
+    fundo.lineStyle(3, 0xffffff, 1);
+    fundo.strokeRect(0, 0, larg, alt);
 
-    // Preview do gradiente do céu
-    const ceuGfx = this.add.graphics();
-    const passos = 8;
-    for (let i = 0; i < passos; i++) {
-      const t = i / passos;
-      const topoR = (ciclo.ceuTopo >> 16) & 0xff;
-      const topoG = (ciclo.ceuTopo >> 8) & 0xff;
-      const topoB = ciclo.ceuTopo & 0xff;
-      const baseR = (ciclo.ceuBase >> 16) & 0xff;
-      const baseG = (ciclo.ceuBase >> 8) & 0xff;
-      const baseB = ciclo.ceuBase & 0xff;
-      const r = Math.floor(Phaser.Math.Linear(topoR, baseR, t));
-      const g = Math.floor(Phaser.Math.Linear(topoG, baseG, t));
-      const b = Math.floor(Phaser.Math.Linear(topoB, baseB, t));
-      ceuGfx.fillStyle((r << 16) | (g << 8) | b, 1);
-      ceuGfx.fillRect(12, 12 + (56 / passos) * i, larg - 24, 56 / passos + 1);
-    }
-
-    // Faixa de grama
-    ceuGfx.fillStyle(ciclo.corGrama, 1);
-    ceuGfx.fillRect(12, 68, larg - 24, 12);
-
-    // Rótulo
-    const rotulo = this.add.text(larg / 2, alt - 22, ciclo.rotuloPt, {
-      fontFamily: 'Outfit, sans-serif',
-      fontSize: '12px',
-      color: '#aabbcc',
+    const letra = this.add.text(larg / 2, alt * 0.38, ciclo.rotuloPt.charAt(0).toUpperCase(), {
+      fontFamily: 'Orbitron, monospace',
+      fontSize: '48px',
+      color: '#ffffff',
     }).setOrigin(0.5);
 
-    container.add([fundo, ceuGfx, rotulo]);
+    const nome = this.add.text(larg / 2, alt - 22, ciclo.rotuloPt.toUpperCase(), {
+      fontFamily: 'Orbitron, monospace',
+      fontSize: '9px',
+      color: '#ffffff',
+    }).setOrigin(0.5);
+
+    container.add([fundo, letra, nome]);
     container.setSize(larg, alt);
     container.setInteractive({ useHandCursor: true });
     container.setData('ciclo', ciclo);
@@ -283,133 +233,74 @@ export class CenaSelecaoUniforme extends Phaser.Scene {
     container.on('pointerup', () => {
       this.cicloSelecionado = ciclo;
       definirCicloHorario(ciclo);
-      this._desenharFundoPreview();
       this._destacarSelecionados();
     });
-
-    container.on('pointerover', () => {
-      this.tweens.add({ targets: container, scaleX: 1.06, scaleY: 1.06, duration: 150, ease: 'Back.easeOut' });
-    });
-    container.on('pointerout', () => {
-      this.tweens.add({ targets: container, scaleX: 1, scaleY: 1, duration: 150 });
-    });
+    container.on('pointerover', () => this.tweens.add({ targets: container, scaleY: 1.05, scaleX: 1.05, duration: 100 }));
+    container.on('pointerout',  () => this.tweens.add({ targets: container, scaleY: 1, scaleX: 1, duration: 100 }));
 
     return container;
   }
 
-  // ─── Métodos auxiliares ────────────────────
-  private _desenharFundo(): void {
-    const fundo = this.add.graphics();
-    const passos = 30;
-    for (let i = 0; i < passos; i++) {
-      const t = i / passos;
-      const r = Math.floor(Phaser.Math.Linear(8, 12, t));
-      const g = Math.floor(Phaser.Math.Linear(10, 15, t));
-      const b = Math.floor(Phaser.Math.Linear(20, 30, t));
-      fundo.fillStyle((r << 16) | (g << 8) | b, 1);
-      fundo.fillRect(0, (ALTURA_JOGO / passos) * i, LARGURA_JOGO, ALTURA_JOGO / passos + 1);
-    }
-  }
-
-  private _desenharFundoPreview(): void {
-    this.fundoPreview.clear();
-    const cx = LARGURA_JOGO / 2;
-    const cy = 280;
-    const larg = 260;
-    const alt = 200;
-
-    // Mini arena com cores do ciclo horário
-    const ciclo = this.cicloSelecionado;
-    const passos = 10;
-    for (let i = 0; i < passos; i++) {
-      const t = i / passos;
-      const topoR = (ciclo.ceuTopo >> 16) & 0xff;
-      const topoG = (ciclo.ceuTopo >> 8) & 0xff;
-      const topoB = ciclo.ceuTopo & 0xff;
-      const baseR = (ciclo.ceuBase >> 16) & 0xff;
-      const baseG = (ciclo.ceuBase >> 8) & 0xff;
-      const baseB = ciclo.ceuBase & 0xff;
-      const r = Math.floor(Phaser.Math.Linear(topoR, baseR, t));
-      const g = Math.floor(Phaser.Math.Linear(topoG, baseG, t));
-      const b = Math.floor(Phaser.Math.Linear(topoB, baseB, t));
-      this.fundoPreview.fillStyle((r << 16) | (g << 8) | b, 0.5);
-      this.fundoPreview.fillRect(cx - larg / 2, cy - alt / 2 + (alt / passos) * i, larg, alt / passos + 1);
-    }
-
-    // Borda
-    this.fundoPreview.lineStyle(2, 0x334455, 0.5);
-    this.fundoPreview.strokeRoundedRect(cx - larg / 2, cy - alt / 2, larg, alt, 10);
-  }
-
   private _atualizarPreview(): void {
-    this.spritePreview.setTexture(`jogador_${this.uniformeSelecionado.id}`);
+    this.spritePreview.setTint(this.uniformeSelecionado.corPrimaria);
     const oponente = UNIFORMES.find(u => u.id !== this.uniformeSelecionado.id) || UNIFORMES[1];
-    this.spriteOponente.setTexture(`jogador_${oponente.id}`);
+    this.spriteOponente.setTint(oponente.corPrimaria);
   }
 
   private _destacarSelecionados(): void {
-    // Destacar cartões de uniforme
     this.cartoesUniforme.forEach(cartao => {
       const u = cartao.getData('uniforme') as OpcaoUniforme;
-      const selecionado = u.id === this.uniformeSelecionado.id;
-      const fundo = cartao.list[0] as Phaser.GameObjects.Graphics;
-      fundo.clear();
-      fundo.fillStyle(selecionado ? 0x1a2244 : 0x111122, 0.9);
-      fundo.fillRoundedRect(0, 0, 200, 200, 12);
-      fundo.lineStyle(2, selecionado ? 0x42a5f5 : 0x222244, selecionado ? 1 : 0.6);
-      fundo.strokeRoundedRect(0, 0, 200, 200, 12);
+      const gfx = cartao.list[0] as Phaser.GameObjects.Graphics;
+      const sel = u.id === this.uniformeSelecionado.id;
+      gfx.clear();
+      gfx.fillStyle(sel ? 0x27ae60 : 0x000000, 1);
+      gfx.fillRect(0, 0, 160, 220);
+      gfx.lineStyle(sel ? 6 : 4, 0xffffff, 1);
+      gfx.strokeRect(0, 0, 160, 220);
     });
 
-    // Destacar cartões de ciclo
     this.cartoesCiclo.forEach(cartao => {
       const c = cartao.getData('ciclo') as PresetHorario;
-      const selecionado = c.nome === this.cicloSelecionado.nome;
-      const fundo = cartao.list[0] as Phaser.GameObjects.Graphics;
-      fundo.clear();
-      fundo.fillStyle(selecionado ? 0x1a2244 : 0x111122, 0.9);
-      fundo.fillRoundedRect(0, 0, 100, 130, 10);
-      fundo.lineStyle(2, selecionado ? 0x42a5f5 : 0x222244, selecionado ? 1 : 0.6);
-      fundo.strokeRoundedRect(0, 0, 100, 130, 10);
+      const gfx = cartao.list[0] as Phaser.GameObjects.Graphics;
+      const sel = c.nome === this.cicloSelecionado.nome;
+      gfx.clear();
+      gfx.fillStyle(sel ? 0x27ae60 : 0x000000, 1);
+      gfx.fillRect(0, 0, 90, 140);
+      gfx.lineStyle(sel ? 5 : 3, 0xffffff, 1);
+      gfx.strokeRect(0, 0, 90, 140);
     });
   }
 
   private _criarBotaoIniciar(x: number, y: number): void {
-    const larg = 280;
-    const alt = 50;
+    const larg = 400;
+    const alt  = 64;
     const container = this.add.container(x, y);
 
     const fundo = this.add.graphics();
-    fundo.fillGradientStyle(0x1565c0, 0x1565c0, 0x0d47a1, 0x0d47a1, 1);
-    fundo.fillRoundedRect(-larg / 2, -alt / 2, larg, alt, 10);
-    fundo.lineStyle(2, 0x42a5f5, 0.6);
-    fundo.strokeRoundedRect(-larg / 2, -alt / 2, larg, alt, 10);
+    const _desenharFundo = (verde: boolean) => {
+      fundo.clear();
+      fundo.fillStyle(verde ? 0x27ae60 : 0x000000, 1);
+      fundo.fillRect(-larg / 2, -alt / 2, larg, alt);
+      fundo.lineStyle(5, 0xffffff, 1);
+      fundo.strokeRect(-larg / 2, -alt / 2, larg, alt);
+    };
+    _desenharFundo(false);
 
-    // Brilho
-    const brilho = this.add.graphics();
-    brilho.fillStyle(0xffffff, 0.06);
-    brilho.fillRoundedRect(-larg / 2 + 2, -alt / 2 + 2, larg - 4, alt / 2 - 4, { tl: 8, tr: 8, bl: 0, br: 0 });
-
-    const texto = this.add.text(0, 0, '⚡  ENTRAR NA ARENA  ⚡', {
+    const texto = this.add.text(0, 0, '⚽  INICIAR PARTIDA  ⚽', {
       fontFamily: 'Orbitron, monospace',
-      fontSize: '16px',
+      fontSize: '24px',
       color: '#ffffff',
       fontStyle: 'bold',
     }).setOrigin(0.5);
 
-    container.add([fundo, brilho, texto]);
+    container.add([fundo, texto]);
     container.setSize(larg, alt);
     container.setInteractive({ useHandCursor: true });
 
-    container.on('pointerover', () => {
-      this.tweens.add({ targets: container, scaleX: 1.06, scaleY: 1.06, duration: 150, ease: 'Back.easeOut' });
-    });
-    container.on('pointerout', () => {
-      this.tweens.add({ targets: container, scaleX: 1, scaleY: 1, duration: 150 });
-    });
-    container.on('pointerdown', () => {
-      this.tweens.add({ targets: container, scaleX: 0.94, scaleY: 0.94, duration: 80 });
-    });
-    container.on('pointerup', () => {
+    container.on('pointerover', () => _desenharFundo(true));
+    container.on('pointerout',  () => _desenharFundo(false));
+    container.on('pointerdown', () => this.tweens.add({ targets: container, scaleX: 0.96, scaleY: 0.96, duration: 80 }));
+    container.on('pointerup',   () => {
       this.cameras.main.fade(500, 0, 0, 0, false, (_c: Phaser.Cameras.Scene2D.Camera, p: number) => {
         if (p >= 1) this.scene.start('CenaJogo');
       });

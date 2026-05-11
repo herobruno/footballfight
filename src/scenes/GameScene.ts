@@ -61,11 +61,6 @@ export class CenaJogo extends Phaser.Scene {
   // Arena
   private cicloHorario!: PresetHorario;
 
-  // Bola
-  private bola!: Phaser.GameObjects.Image;
-  private bolaVX = 0;
-  private bolaVY = 0;
-
   constructor() {
     super({ key: 'CenaJogo' });
   }
@@ -76,10 +71,6 @@ export class CenaJogo extends Phaser.Scene {
 
     // ── Desenhar a Arena ─────────────────────
     this._desenharArena();
-
-    // ── Criar a Bola ─────────────────────────
-    this.bola = this.add.image(LARGURA_JOGO / 2, CHAO_Y - 20, 'bola');
-    this.bola.setDepth(5).setScale(1.8);
 
     // ── Criar Jogadores ──────────────────────
     this.jogador1 = this._criarJogador(300, CHAO_Y, estado.uniformeJogador1.id, true);
@@ -127,7 +118,6 @@ export class CenaJogo extends Phaser.Scene {
     this._aplicarFisica(this.jogador2, dt);
     this._atualizarVigor(this.jogador1, dt);
     this._atualizarVigor(this.jogador2, dt);
-    this._atualizarBola(dt);
     this._atualizarAnimacoes(this.jogador1, dt);
     this._atualizarAnimacoes(this.jogador2, dt);
     this._atualizarHUD();
@@ -262,62 +252,7 @@ export class CenaJogo extends Phaser.Scene {
     jogador.vigor = Phaser.Math.Clamp(jogador.vigor, 0, VIGOR_MAXIMO);
     jogador.estaExausto = jogador.vigor <= LIMIAR_EXAUSTO;
   }
-
-  // ═══════════════════════════════════════════
-  //  FÍSICA DA BOLA
-  // ═══════════════════════════════════════════
-  private _atualizarBola(dt: number): void {
-    this.bolaVY += 600 * dt;
-
-    this.bola.x += this.bolaVX * dt;
-    this.bola.y += this.bolaVY * dt;
-
-    if (this.bola.y >= CHAO_Y - 12) {
-      this.bola.y = CHAO_Y - 12;
-      this.bolaVY = -this.bolaVY * 0.5;
-      this.bolaVX *= 0.85;
-      if (Math.abs(this.bolaVY) < 20) this.bolaVY = 0;
-    }
-
-    if (this.bola.x < 30 || this.bola.x > LARGURA_JOGO - 30) {
-      this.bolaVX = -this.bolaVX * 0.7;
-      this.bola.x = Phaser.Math.Clamp(this.bola.x, 30, LARGURA_JOGO - 30);
-    }
-
-    if (this.bola.y < 40) {
-      this.bola.y = 40;
-      this.bolaVY = Math.abs(this.bolaVY) * 0.4;
-    }
-
-    this._colisaoJogadorBola(this.jogador1);
-    this._colisaoJogadorBola(this.jogador2);
-
-    this.bola.rotation += this.bolaVX * dt * 0.01;
-  }
-
-  private _colisaoJogadorBola(jogador: DadosJogador): void {
-    const dx = this.bola.x - jogador.sprite.x;
-    const dy = this.bola.y - (jogador.sprite.y - 36);
-    const distancia = Math.sqrt(dx * dx + dy * dy);
-
-    if (distancia < 40) {
-      const nx = dx / (distancia || 1);
-      const ny = dy / (distancia || 1);
-      const forcaChute = jogador.estaCorrendo ? 500 : 300;
-      this.bolaVX = nx * forcaChute;
-      this.bolaVY = ny * forcaChute - 200;
-
-      jogador.estaChutando = true;
-      jogador.sprite.play('player_kick', true);
-      jogador.sprite.once('animationcomplete-player_kick', () => {
-        jogador.estaChutando = false;
-      });
-
-      this.bola.x = jogador.sprite.x + nx * 42;
-      this.bola.y = (jogador.sprite.y - 36) + ny * 42;
-    }
-  }
-
+  
   // ═══════════════════════════════════════════
   //  ANIMAÇÕES
   // ═══════════════════════════════════════════

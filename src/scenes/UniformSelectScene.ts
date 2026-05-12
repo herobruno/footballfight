@@ -96,12 +96,12 @@ export class CenaSelecaoUniforme extends Phaser.Scene {
     }).setOrigin(0.5);
 
     // Sprites dos jogadores
-    this.spritePreview = this.add.sprite(previewCX - 110, previewY - 20, 'player_sheet').setScale(3);
+    this.spritePreview = this.add.sprite(previewCX - 110, previewY - 20, 'p_parado').setScale(0.18);
     this.spritePreview.setTint(this.uniformeSelecionado.corPrimaria);
     this.spritePreview.play('player_idle');
 
     const oponente = UNIFORMES.find(u => u.id !== this.uniformeSelecionado.id) || UNIFORMES[1];
-    this.spriteOponente = this.add.sprite(previewCX + 110, previewY - 20, 'player_sheet').setScale(3).setFlipX(true);
+    this.spriteOponente = this.add.sprite(previewCX + 110, previewY - 20, 'p_parado').setScale(0.18).setFlipX(true);
     this.spriteOponente.setTint(oponente.corPrimaria);
     this.spriteOponente.play('player_idle');
 
@@ -173,7 +173,7 @@ export class CenaSelecaoUniforme extends Phaser.Scene {
     fundo.lineStyle(4, 0xffffff, 1);
     fundo.strokeRect(0, 0, larg, alt);
 
-    const sprite = this.add.sprite(larg / 2, alt * 0.42, 'player_sheet').setScale(2);
+    const sprite = this.add.sprite(larg / 2, alt * 0.42, 'p_parado').setScale(0.12);
     sprite.setTint(uniforme.corPrimaria);
     sprite.play('player_idle');
 

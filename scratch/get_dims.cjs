@@ -11,9 +11,16 @@ function getPngDimensions(filePath) {
     return { width, height };
 }
 
-try {
-    const dims = getPngDimensions('src/assets/sprites/player_sheet.png');
-    console.log(JSON.stringify(dims));
-} catch (e) {
-    console.error(e.message);
-}
+const spriteDir = 'src/assets/sprites';
+const files = fs.readdirSync(spriteDir).filter(f => f.endsWith('.png'));
+
+const results = {};
+files.forEach(file => {
+    try {
+        results[file] = getPngDimensions(path.join(spriteDir, file));
+    } catch (e) {
+        results[file] = { error: e.message };
+    }
+});
+
+console.log(JSON.stringify(results, null, 2));

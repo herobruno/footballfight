@@ -32,83 +32,177 @@
         image-rendering: pixelated; /* Toque PS1 */
       }
 
-      /* ─── HUD CSS (PS1 Style) ─── */
+      /* ─── HUD CSS (Futuristic Style) ─── */
       .hud-container {
         position: absolute;
         top: 30px;
         z-index: 100;
         display: none;
         flex-direction: column;
-        gap: 12px;
-        width: 420px;
+        gap: 8px;
+        width: 380px;
         pointer-events: none;
-        padding: 10px;
+        font-family: 'Orbitron', sans-serif;
       }
-      #hud-p1 { left: 30px; }
-      #hud-p2 { right: 30px; text-align: right; }
+      #hud-p1 { left: 40px; }
+      #hud-p2 { right: 40px; text-align: right; }
       #hud-p2 .bar-wrapper { flex-direction: row-reverse; }
 
       .player-name {
         color: #fff;
         font-weight: 900;
-        font-family: 'Orbitron', sans-serif;
-        font-size: 20px;
+        font-size: 18px;
         text-transform: uppercase;
-        letter-spacing: 3px;
-        margin-bottom: 8px;
-        text-shadow: 2px 2px 0px #000;
+        letter-spacing: 2px;
+        margin-bottom: 4px;
+        text-shadow: 0 0 10px rgba(255, 255, 255, 0.5);
       }
+      #hud-p1 .player-name { color: #00ffff; }
+      #hud-p2 .player-name { color: #ff3e3e; }
 
       .bar-wrapper {
         display: flex;
         align-items: center;
-        gap: 15px;
+        gap: 12px;
       }
 
       .icon {
-        font-size: 28px;
-        filter: drop-shadow(2px 2px 0px #000);
+        font-size: 20px;
+        filter: drop-shadow(0 0 5px currentColor);
       }
 
       .bar-container {
         flex: 1;
-        height: 24px;
-        background: #000;
-        border: 3px solid #fff;
+        height: 18px;
+        background: rgba(0, 0, 0, 0.7);
+        border: 2px solid #fff;
         position: relative;
+        transform: skewX(-15deg);
+        overflow: hidden;
+        box-shadow: 0 0 10px rgba(0, 0, 0, 0.5);
       }
 
       .bar-fill {
         height: 100%;
         width: 100%;
-        transition: width 0.1s;
+        transition: width 0.3s cubic-bezier(0.1, 0.7, 0.1, 1);
       }
 
       .health-bar .bar-fill {
-        background: #2ecc71;
-        box-shadow: inset 0 -4px 0 rgba(0,0,0,0.3);
+        background: linear-gradient(90deg, #2ecc71, #27ae60);
+        box-shadow: 0 0 15px rgba(46, 204, 113, 0.6);
       }
       .stamina-bar .bar-fill {
-        background: #8d6e63;
-        box-shadow: inset 0 -4px 0 rgba(0,0,0,0.3);
+        background: linear-gradient(90deg, #f1c40f, #f39c12);
+        box-shadow: 0 0 15px rgba(241, 196, 15, 0.6);
       }
-      #hud-p2 .stamina-bar .bar-fill {
-        background: #d35400;
-        box-shadow: inset 0 -4px 0 rgba(0,0,0,0.3);
-      }
+
+      #hud-p1 .health-bar { border-color: #00ffff; }
+      #hud-p2 .health-bar { border-color: #ff3e3e; }
 
       .bar-label {
         position: absolute;
-        right: 12px;
+        right: 10px;
         top: 50%;
-        transform: translateY(-50%);
-        font-size: 14px;
+        transform: translateY(-50%) skewX(15deg);
+        font-size: 10px;
         font-weight: 900;
         color: #fff;
-        font-family: 'Orbitron', sans-serif;
-        text-shadow: 2px 2px 0px #000;
+        text-shadow: 1px 1px 2px #000;
       }
-      #hud-p2 .bar-label { left: 12px; right: auto; }
+      #hud-p2 .bar-label { left: 10px; right: auto; }
+
+      /* ─── Match Scoreboard CSS (Hexagonal Style) ─── */
+      .match-scoreboard {
+        position: absolute;
+        top: 20px;
+        left: 50%;
+        transform: translateX(-50%);
+        display: none;
+        align-items: center;
+        justify-content: center;
+        z-index: 150;
+        pointer-events: none;
+        font-family: 'Orbitron', sans-serif;
+        filter: 
+          drop-shadow(2px 0 0 #000) 
+          drop-shadow(-2px 0 0 #000) 
+          drop-shadow(0 2px 0 #000) 
+          drop-shadow(0 -2px 0 #000)
+          drop-shadow(0 4px 8px rgba(0,0,0,0.5));
+      }
+
+      .team-box {
+        background: #111;
+        height: 35px;
+        display: flex;
+        align-items: center;
+        padding: 0 25px;
+        color: #fff;
+        font-weight: 700;
+        font-size: 11px;
+        letter-spacing: 1px;
+        position: relative;
+        overflow: hidden;
+      }
+
+      .team-p1 {
+        clip-path: polygon(15px 0%, 100% 0%, 100% 100%, 15px 100%, 0% 50%);
+        background: linear-gradient(90deg, #660000, #222);
+        border-left: 2px solid #ff3e3e;
+        margin-right: -15px;
+      }
+
+      .team-p2 {
+        clip-path: polygon(0% 0%, calc(100% - 15px) 0%, 100% 50%, calc(100% - 15px) 100%, 0% 100%);
+        background: linear-gradient(270deg, #004466, #222);
+        border-right: 2px solid #00ffff;
+        margin-left: -15px;
+      }
+
+      .score-center {
+        background: #0a0a0a;
+        height: 48px;
+        width: 100px;
+        display: flex;
+        flex-direction: column;
+        align-items: center;
+        justify-content: center;
+        clip-path: polygon(15% 0%, 85% 0%, 100% 50%, 85% 100%, 15% 100%, 0% 50%);
+        border: 2px solid #333;
+        position: relative;
+        z-index: 5;
+        box-shadow: inset 0 0 15px rgba(0,255,255,0.1);
+      }
+
+      .score-display {
+        font-size: 24px;
+        font-weight: 900;
+        color: #fff;
+        display: flex;
+        align-items: center;
+        gap: 6px;
+        line-height: 1;
+        margin-top: 2px;
+      }
+
+      .score-value {
+        min-width: 20px;
+        text-align: center;
+      }
+
+      .score-dash {
+        color: rgba(255, 255, 255, 0.4);
+        font-size: 18px;
+      }
+
+      .game-timer {
+        font-size: 8px;
+        color: #00ffff;
+        margin-top: 1px;
+        font-weight: 600;
+        letter-spacing: 1px;
+      }
 
       #game-container::after {
         content: " ";
@@ -142,6 +236,19 @@
             <span id="stamina-label-p1" class="bar-label">100%</span>
           </div>
         </div>
+      </div>
+
+      <div id="match-scoreboard" class="match-scoreboard">
+        <div class="team-box team-p1">JOGADOR 1</div>
+        <div class="score-center">
+          <div class="score-display">
+            <span id="score-p1" class="score-value">0</span>
+            <span class="score-dash">-</span>
+            <span id="score-p2" class="score-value">0</span>
+          </div>
+          <div id="game-timer" class="game-timer">02:00</div>
+        </div>
+        <div class="team-box team-p2">CPU / P2</div>
       </div>
 
       <div id="hud-p2" class="hud-container">

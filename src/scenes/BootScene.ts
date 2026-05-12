@@ -1,6 +1,15 @@
 import Phaser from 'phaser';
 import { LARGURA_JOGO, ALTURA_JOGO, UNIFORMES } from '../constantes';
-import playerSheetUrl from '../assets/sprites/player_sheet.png';
+import paradoUrl from '../assets/sprites/parado.png';
+import andandoUrl from '../assets/sprites/andando.png';
+import correndoUrl from '../assets/sprites/correndo.png';
+import chutandoUrl from '../assets/sprites/chutando.png';
+import pulandoUrl from '../assets/sprites/pulando.png';
+import socoUrl from '../assets/sprites/soco.png';
+import fundoUrl from '../assets/sprites/imagem_fundo.png';
+import bolaPoderUrl from '../assets/fx/bola_poder_parada.png';
+import bolaChutadaUrl from '../assets/fx/bola_poder_chutada.png';
+import placarUrl from '../assets/ui/placar.png';
 import estadioUrl from '../assets/ui/estadio.jpeg';
 
 export class CenaInicializacao extends Phaser.Scene {
@@ -35,14 +44,21 @@ export class CenaInicializacao extends Phaser.Scene {
       rotulo.destroy();
     });
 
-    // Carregar Spritesheet do Jogador
-    this.load.spritesheet('player_sheet', playerSheetUrl, {
-      frameWidth: 56,
-      frameHeight: 61,
-    });
+    // Carregar Spritesheets do Jogador (Novas)
+    // Cada sheet tem 2560x1440. O frameWidth depende do número de frames.
+    this.load.spritesheet('p_parado', paradoUrl, { frameWidth: Math.floor(2560 / 4), frameHeight: 1440 });
+    this.load.spritesheet('p_andando', andandoUrl, { frameWidth: Math.floor(2560 / 6), frameHeight: 1440 });
+    this.load.spritesheet('p_correndo', correndoUrl, { frameWidth: Math.floor(2560 / 6), frameHeight: 1440 });
+    this.load.spritesheet('p_chutando', chutandoUrl, { frameWidth: Math.floor(2560 / 4), frameHeight: 1440 });
+    this.load.spritesheet('p_pulando', pulandoUrl, { frameWidth: Math.floor(2560 / 5), frameHeight: 1440 });
+    this.load.spritesheet('p_soco', socoUrl, { frameWidth: Math.floor(2560 / 3), frameHeight: 1440 });
 
-    // Carregar Fundo do Estádio
-    this.load.image('estadio', estadioUrl);
+    this.load.image('bola_poder', bolaPoderUrl);
+    this.load.image('bola_chutada', bolaChutadaUrl);
+    this.load.image('placar', placarUrl);
+
+    // Fundo do Estádio
+    this.load.image('estadio', fundoUrl);
   }
 
   create(): void {
@@ -52,58 +68,66 @@ export class CenaInicializacao extends Phaser.Scene {
   }
 
   private _criarAnimacoes(): void {
-    // Idle / Parado
+    // Idle / Parado (Estabilizado usando apenas o primeiro frame)
     this.anims.create({
       key: 'player_idle',
-      frames: this.anims.generateFrameNumbers('player_sheet', { start: 0, end: 5 }),
-      frameRate: 8,
+      frames: this.anims.generateFrameNumbers('p_parado', { start: 0, end: 0 }),
+      frameRate: 1,
       repeat: -1
     });
 
-    // Walking / Andando
+    // Walking / Andando (6 frames)
     this.anims.create({
       key: 'player_walk',
-      frames: this.anims.generateFrameNumbers('player_sheet', { start: 0, end: 11 }),
-      frameRate: 12,
+      frames: this.anims.generateFrameNumbers('p_andando', { start: 0, end: 5 }),
+      frameRate: 10,
       repeat: -1
     });
 
-    // Running / Correndo
+    // Running / Correndo (6 frames)
     this.anims.create({
       key: 'player_run',
-      frames: this.anims.generateFrameNumbers('player_sheet', { start: 12, end: 23 }),
-      frameRate: 16,
+      frames: this.anims.generateFrameNumbers('p_correndo', { start: 0, end: 5 }),
+      frameRate: 18,
       repeat: -1
     });
 
-    // Kick / Chute
+    // Kick / Chute (4 frames)
     this.anims.create({
       key: 'player_kick',
-      frames: this.anims.generateFrameNumbers('player_sheet', { start: 36, end: 47 }),
-      frameRate: 20,
+      frames: this.anims.generateFrameNumbers('p_chutando', { start: 0, end: 3 }),
+      frameRate: 12,
       repeat: 0
     });
 
-    // Jump / Pulo
+    // Punch / Soco (3 frames)
+    this.anims.create({
+      key: 'player_punch',
+      frames: this.anims.generateFrameNumbers('p_soco', { start: 0, end: 2 }),
+      frameRate: 12,
+      repeat: 0
+    });
+
+    // Jump / Pulo (Frames 0-2 de pulando.png)
     this.anims.create({
       key: 'player_jump',
-      frames: this.anims.generateFrameNumbers('player_sheet', { start: 60, end: 62 }),
+      frames: this.anims.generateFrameNumbers('p_pulando', { start: 0, end: 2 }),
       frameRate: 10,
       repeat: 0
     });
 
-    // Fall / Queda
+    // Fall / Queda (Frames 3-4 de pulando.png)
     this.anims.create({
       key: 'player_fall',
-      frames: this.anims.generateFrameNumbers('player_sheet', { start: 63, end: 64 }),
+      frames: this.anims.generateFrameNumbers('p_pulando', { start: 3, end: 4 }),
       frameRate: 10,
       repeat: -1
     });
 
-    // Slide / Carrinho
+    // Slide / Carrinho (Ainda não temos sprite específica, vamos usar um frame de soco ou queda por enquanto)
     this.anims.create({
       key: 'player_slide',
-      frames: this.anims.generateFrameNumbers('player_sheet', { start: 67, end: 69 }),
+      frames: this.anims.generateFrameNumbers('p_soco', { start: 1, end: 1 }),
       frameRate: 10,
       repeat: 0
     });
@@ -111,8 +135,8 @@ export class CenaInicializacao extends Phaser.Scene {
     // Exhausted / Ofegante
     this.anims.create({
       key: 'player_exhausted',
-      frames: [{ key: 'player_sheet', frame: 71 }],
-      frameRate: 1,
+      frames: this.anims.generateFrameNumbers('p_parado', { start: 0, end: 1 }),
+      frameRate: 4,
       repeat: -1
     });
   }

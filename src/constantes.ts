@@ -10,7 +10,7 @@ export const VELOCIDADE_ANDAR = 260;
 export const VELOCIDADE_CORRER = 420;
 export const FORCA_PULO = -520;
 export const TAMANHO_JOGADOR = { largura: 56, altura: 61 };
-export const CHAO_Y = 580;
+export const CHAO_Y = 710;
 
 // ─── Vigor / Estamina ────────────────────────
 export const VIGOR_MAXIMO = 100;
@@ -52,11 +52,11 @@ export const CICLOS_HORARIO: PresetHorario[] = [
   },
   {
     nome: 'noite',
-    ceuTopo: 0x000000, // Preto
-    ceuBase: 0x2d1b15, // Marrom Profundo
-    corGrama: 0x1a0f0a,
-    alfaAmbiente: 0.4,
-    corAmbiente: 0x000000,
+    ceuTopo: 0x000033, // Azul escuro
+    ceuBase: 0x000000, // Preto
+    corGrama: 0x050510,
+    alfaAmbiente: 0.6,
+    corAmbiente: 0x000022, // Tom azulado para a noite
     rotuloPt: 'Noite Sombria',
   },
 ];

@@ -100,13 +100,12 @@ export class CenaJogo extends Phaser.Scene {
   private tempoRestante: number = 120; // 2 minutos
   private eventoCronometro?: Phaser.Time.TimerEvent;
 
-  private estatisticasJ1 = {
-    golsMarcados: 0,
-    golsSofridos: 0,
+  private estatisticas = {
+    roundsVencidos: 0,
+    roundsPerdidos: 0,
     socosConectados: 0,
     superChutesDisparados: 0,
-    parriesComSucesso: 0,
-    tempoDePosse: 0,
+    tempoComPoder: 0,
     pontosGladiador: 0,
     pontosTatico: 0,
   };
@@ -174,6 +173,7 @@ export class CenaJogo extends Phaser.Scene {
       pegar: teclado.addKey(Phaser.Input.Keyboard.KeyCodes.E),
     };
 
+    // ── O NOVO CLIQUE DO MOUSE ENTRA AQUI ───────────────────
     this.input.on("pointerdown", (pointer: Phaser.Input.Pointer) => {
       if (pointer.leftButtonDown()) {
         const j = this.jogador1;
@@ -189,6 +189,10 @@ export class CenaJogo extends Phaser.Scene {
               this.emitirRastroJ1 = true;
               this._ativarSlowMotion(600);
 
+              // CONTABILIZA ESTATÍSTICA DO SUPER CHUTE
+              this.estatisticas.superChutesDisparados++;
+              this.estatisticas.pontosTatico += 15;
+
               // Disparar o projetil apos um pequeno delay para sincronizar com o pe
               this.time.delayedCall(100, () => {
                 this._dispararProjetil(j);
@@ -197,7 +201,7 @@ export class CenaJogo extends Phaser.Scene {
               // Quando o chute terminar, desliga o estado de chute E o rastro
               j.sprite.once("animationcomplete", () => {
                 j.estaChutando = false;
-                this.emitirRastroJ1 = false; // <-- CRUCIAL: Para o rastro não ficar infinito!
+                this.emitirRastroJ1 = false;
               });
             }
           } else {
@@ -210,9 +214,7 @@ export class CenaJogo extends Phaser.Scene {
         }
       }
     });
-
-    // ── Dica de pausa ────────────────────────
-    // Removido o texto fixo de ESC conforme solicitado
+    // ────────────────────────────────────────────────────────
 
     // Prompt de interação (E com seta para baixo)
     this.promptInteracao = this.add
@@ -348,6 +350,11 @@ export class CenaJogo extends Phaser.Scene {
       this._criarEfeitoRastro(this.jogador1);
     }
 
+    // CONTADOR DE PODER: Se o J1 estiver brilhando, soma o tempo frame a frame
+    if (this.estaBrilhando) {
+      this.estatisticas.tempoComPoder += dt;
+    }
+
     this._processarEntrada(this.jogador1, dt);
     this._atualizarIA(this.jogador2, dt);
     this._aplicarFisica(this.jogador1, dt);
@@ -407,8 +414,16 @@ export class CenaJogo extends Phaser.Scene {
 
     if (this.jogador1.vida <= 0 || this.jogador2.vida <= 0) {
       const vencedor = this.jogador1.vida > 0 ? 1 : 2;
-      if (vencedor === 1) this.vitoriasJ1++;
-      else this.vitoriasJ2++;
+
+      // ─── ATUALIZA AS ESTATÍSTICAS DO ROUND AQUI ───
+      if (vencedor === 1) {
+        this.vitoriasJ1++;
+        this.estatisticas.roundsVencidos++; // Jogador 1 ganhou o round
+      } else {
+        this.vitoriasJ2++;
+        this.estatisticas.roundsPerdidos++; // Jogador 1 perdeu o round
+      }
+      // ──────────────────────────────────────────────
 
       if (this.domHud.score1)
         this.domHud.score1.innerText = `${this.vitoriasJ1}`;
@@ -516,13 +531,32 @@ export class CenaJogo extends Phaser.Scene {
     if (this.domHud.scoreboard) {
       this.domHud.scoreboard.style.transition =
         "all 0.8s cubic-bezier(0.175, 0.885, 0.32, 1.275)";
-      this.domHud.scoreboard.style.top = "50%";
+      this.domHud.scoreboard.style.top = "30%"; // Subimos um pouco de 50% para dar espaço para as estatísticas
       this.domHud.scoreboard.style.transform =
         "translateX(-50%) translateY(-100%) scale(2)";
     }
 
+    // ── CALCULAR ALGORITMO DE RANKING DE ESTILO ──
+    const totalPontos =
+      this.estatisticas.pontosGladiador + this.estatisticas.pontosTatico;
+    let estiloFinal = "EQUILIBRADO";
+    let corRanking = "#ffffff";
+
+    if (totalPontos > 0) {
+      const percentualGladiador =
+        this.estatisticas.pontosGladiador / totalPontos;
+      if (percentualGladiador > 0.65) {
+        estiloFinal = "GLADIADOR";
+        corRanking = "#ff3333"; // Vermelho agressivo
+      } else if (percentualGladiador < 0.35) {
+        estiloFinal = "TÁTICO";
+        corRanking = "#00ffff"; // Ciano calculista
+      }
+    }
+
+    // Título do resultado (Mensagem)
     const texto = this.add
-      .text(LARGURA_JOGO / 2, ALTURA_JOGO / 2 + 50, mensagem, {
+      .text(LARGURA_JOGO / 2, ALTURA_JOGO / 2 - 20, mensagem, {
         fontFamily: "Orbitron, monospace",
         fontSize: "32px",
         fontStyle: "bold",
@@ -535,14 +569,36 @@ export class CenaJogo extends Phaser.Scene {
       .setAlpha(0)
       .setScrollFactor(0);
 
+    // ── BLOCO DE EXIBIÇÃO DAS ESTATÍSTICAS NA TELA ──
+    const textoEstatisticas = `
+      ESTILO DE COMBATE: ${estiloFinal}
+      SOCOS CONECTADOS: ${this.estatisticas.socosConectados}
+      SUPER CHUTES: ${this.estatisticas.superChutesDisparados}
+      TEMPO COM PODER: ${Math.round(this.estatisticas.tempoComPoder)}s
+    `.trim();
+
+    const painelStats = this.add
+      .text(LARGURA_JOGO / 2, ALTURA_JOGO / 2 + 80, textoEstatisticas, {
+        fontFamily: "Orbitron, monospace",
+        fontSize: "18px",
+        color: "#aaaaaa",
+        align: "center",
+        lineSpacing: 8,
+      })
+      .setOrigin(0.5)
+      .setDepth(101)
+      .setAlpha(0)
+      .setScrollFactor(0);
+
+    // Subtexto de comando modificado de ESC para ESPAÇO, já que adicionamos o reset
     const subtexto = this.add
       .text(
         LARGURA_JOGO / 2,
-        ALTURA_JOGO / 2 + 110,
-        "Pressione ESC para sair",
+        ALTURA_JOGO / 2 + 190,
+        "Pressione ESPAÇO para reiniciar ou ESC para sair",
         {
           fontFamily: "Outfit, sans-serif",
-          fontSize: "18px",
+          fontSize: "16px",
           color: "#00ffff",
         },
       )
@@ -551,12 +607,25 @@ export class CenaJogo extends Phaser.Scene {
       .setAlpha(0)
       .setScrollFactor(0);
 
+    // Animação de fade in em todos os elementos de texto juntos
     this.tweens.add({
-      targets: [texto, subtexto],
+      targets: [texto, painelStats, subtexto],
       alpha: 1,
       delay: 500,
       duration: 500,
     });
+
+    // Listener para o ESPAÇO (Reiniciar partida limpando o estado)
+    this.input
+      .keyboard!.addKey(Phaser.Input.Keyboard.KeyCodes.SPACE)
+      .once("down", () => {
+        // Se tiver elementos HTML do placar travados na tela, a gente reseta o CSS deles antes de sair
+        if (this.domHud.scoreboard) {
+          this.domHud.scoreboard.style.top = "";
+          this.domHud.scoreboard.style.transform = "";
+        }
+        this.scene.start("CenaMenu");
+      });
   }
 
   private _atualizarProjeteis(dt: number): void {
@@ -909,6 +978,13 @@ export class CenaJogo extends Phaser.Scene {
       if (dist < 130 && alturaOk && direcaoOk) {
         defensor.vida -= dano;
         defensor.vida = Math.max(0, defensor.vida);
+
+        // ─── ADICIONE ESTE BLOCO AQUI DENTRO ───
+        if (atacante === this.jogador1) {
+          this.estatisticas.socosConectados++;
+          this.estatisticas.pontosGladiador += 10; // Dá pontos para o estilo Gladiador
+        }
+        // ───────────────────────────────────────
 
         // Efeito visual de impacto
         defensor.sprite.setTint(0xff0000);

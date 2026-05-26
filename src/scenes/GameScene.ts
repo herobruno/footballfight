@@ -89,8 +89,10 @@ export class CenaJogo extends Phaser.Scene {
   };
 
   private promptInteracao!: Phaser.GameObjects.Text;
-  private estaBrilhando: boolean = false;
-  private emissorBrilho?: Phaser.GameObjects.Particles.ParticleEmitter;
+  private estaBrilhandoJ1: boolean = false;
+  private estaBrilhandoJ2: boolean = false;
+  private emissorBrilhoJ1?: Phaser.GameObjects.Particles.ParticleEmitter;
+  private emissorBrilhoJ2?: Phaser.GameObjects.Particles.ParticleEmitter;
 
   private iconeExaustoJ1!: Phaser.GameObjects.Text;
   private iconeExaustoJ2!: Phaser.GameObjects.Text;
@@ -103,6 +105,10 @@ export class CenaJogo extends Phaser.Scene {
   private numeroRound: number = 1;
   private tempoRestante: number = 120; // 2 minutos
   private eventoCronometro?: Phaser.Time.TimerEvent;
+  private eventoSpawnBolas?: Phaser.Time.TimerEvent;
+
+  // Flag exclusiva para travar super chute e evitar múltiplos disparos
+  private superChuteEmAndamento: boolean = false;
 
   private estatisticas = {
     roundsVencidos: 0,
@@ -127,6 +133,7 @@ export class CenaJogo extends Phaser.Scene {
     sprite: Phaser.GameObjects.Sprite;
     velocidadeX: number;
     emissor: Phaser.GameObjects.Particles.ParticleEmitter;
+    atacante: DadosJogador; // quem disparou
   }[] = [];
 
   constructor() {
@@ -179,13 +186,17 @@ export class CenaJogo extends Phaser.Scene {
 
     // ── O NOVO CLIQUE DO MOUSE ENTRA AQUI ───────────────────
     this.input.on("pointerdown", (pointer: Phaser.Input.Pointer) => {
+      if (this.fimDeJogo) return;
       if (pointer.leftButtonDown()) {
         const j = this.jogador1;
         if (j && !j.estaChutando) {
           const animKey = j.sprite.anims.currentAnim?.key;
 
-          if (this.estaBrilhando) {
-            if (!j.sprite.anims.isPlaying || animKey !== "player_kick") {
+          if (this.estaBrilhandoJ1) {
+            // ── SUPER CHUTE (bola de poder) ──
+            // Flag exclusiva para impedir múltiplos disparos com cliques rápidos
+            if (!this.superChuteEmAndamento) {
+              this.superChuteEmAndamento = true;
               j.estaChutando = true;
               j.sprite.play("player_kick");
 
@@ -197,15 +208,15 @@ export class CenaJogo extends Phaser.Scene {
               this.estatisticas.superChutesDisparados++;
               this.estatisticas.pontosTatico += 15;
 
-              // Disparar o projetil apos um pequeno delay para sincronizar com o pe
-              this.time.delayedCall(100, () => {
-                this._dispararProjetil(j);
-              });
+              // Disparar o projétil IMEDIATAMENTE (sem delayedCall que seria
+              // afetado pelo slow motion, causando delay de ~1s)
+              this._dispararProjetil(j);
 
-              // Quando o chute terminar, desliga o estado de chute E o rastro
+              // Quando o chute terminar, desliga os estados
               j.sprite.once("animationcomplete", () => {
                 j.estaChutando = false;
                 this.emitirRastroJ1 = false;
+                this.superChuteEmAndamento = false;
               });
             }
           } else {
@@ -249,7 +260,7 @@ export class CenaJogo extends Phaser.Scene {
     });
 
     // ── Timer para Bolas de Poder ────────────────
-    this.time.addEvent({
+    this.eventoSpawnBolas = this.time.addEvent({
       delay: 5000, // a cada 5 segundos
       loop: true,
       callback: this._spawnBolaDePoder,
@@ -288,39 +299,64 @@ export class CenaJogo extends Phaser.Scene {
     this.bolasDePoder.push(bolaData);
   }
 
-  private _coletarBola(bola: any): void {
+  private _coletarBola(bola: any, jogador: DadosJogador): void {
     // Remover bola
     bola.emissor.destroy();
     bola.sprite.destroy();
     this.bolasDePoder = this.bolasDePoder.filter((b) => b !== bola);
     this.promptInteracao.setVisible(false);
 
-    // Efeito de brilho no jogador
-    this._ativarBrilhoJogador();
+    // Efeito de brilho no jogador que coletou
+    this._ativarBrilhoJogador(jogador);
   }
 
-  private _ativarBrilhoJogador(): void {
-    if (this.estaBrilhando) return;
-    this.estaBrilhando = true;
+  private _ativarBrilhoJogador(jogador: DadosJogador): void {
+    const ehJ1 = jogador === this.jogador1;
+    if (ehJ1 && this.estaBrilhandoJ1) return;
+    if (!ehJ1 && this.estaBrilhandoJ2) return;
 
-    this.emissorBrilho = this.add.particles(0, 0, "particula", {
-      speed: { min: 20, max: 100 },
-      scale: { start: 0.5, end: 0 },
-      tint: [0x00ffff, 0xffffff],
-      lifespan: 600,
-      blendMode: "ADD",
-      frequency: 20,
-      follow: this.jogador1.sprite,
-      followOffset: { x: 0, y: -40 },
-    });
-  }
-
-  private _removerBrilho(): void {
-    if (this.emissorBrilho) {
-      this.emissorBrilho.destroy();
-      this.emissorBrilho = undefined;
+    if (ehJ1) {
+      this.estaBrilhandoJ1 = true;
+      this.emissorBrilhoJ1 = this.add.particles(0, 0, "particula", {
+        speed: { min: 20, max: 100 },
+        scale: { start: 0.5, end: 0 },
+        tint: [0x00ffff, 0xffffff],
+        lifespan: 600,
+        blendMode: "ADD",
+        frequency: 20,
+        follow: this.jogador1.sprite,
+        followOffset: { x: 0, y: -40 },
+      });
+    } else {
+      this.estaBrilhandoJ2 = true;
+      this.emissorBrilhoJ2 = this.add.particles(0, 0, "particula", {
+        speed: { min: 20, max: 100 },
+        scale: { start: 0.5, end: 0 },
+        tint: [0xff4444, 0xffffff],
+        lifespan: 600,
+        blendMode: "ADD",
+        frequency: 20,
+        follow: this.jogador2.sprite,
+        followOffset: { x: 0, y: -40 },
+      });
     }
-    this.estaBrilhando = false;
+  }
+
+  private _removerBrilhoJogador(jogador?: DadosJogador): void {
+    if (!jogador || jogador === this.jogador1) {
+      if (this.emissorBrilhoJ1) {
+        this.emissorBrilhoJ1.destroy();
+        this.emissorBrilhoJ1 = undefined;
+      }
+      this.estaBrilhandoJ1 = false;
+    }
+    if (!jogador || jogador === this.jogador2) {
+      if (this.emissorBrilhoJ2) {
+        this.emissorBrilhoJ2.destroy();
+        this.emissorBrilhoJ2 = undefined;
+      }
+      this.estaBrilhandoJ2 = false;
+    }
   }
 
   private _dispararProjetil(atacante: DadosJogador): void {
@@ -342,10 +378,10 @@ export class CenaJogo extends Phaser.Scene {
       follow: sprite,
     });
 
-    this.projeteis.push({ sprite, velocidadeX: 1200 * direcao, emissor });
+    this.projeteis.push({ sprite, velocidadeX: 1200 * direcao, emissor, atacante });
 
-    // Consumir o poder
-    this._removerBrilho();
+    // Consumir o poder do atacante
+    this._removerBrilhoJogador(atacante);
   }
 
   update(_tempo: number, delta: number): void {
@@ -356,7 +392,7 @@ export class CenaJogo extends Phaser.Scene {
     }
 
     // CONTADOR DE PODER: Se o J1 estiver brilhando, soma o tempo frame a frame
-    if (this.estaBrilhando) {
+    if (this.estaBrilhandoJ1) {
       this.estatisticas.tempoComPoder += dt;
     }
 
@@ -503,11 +539,17 @@ export class CenaJogo extends Phaser.Scene {
       p.emissor.destroy();
     });
     this.projeteis = [];
-    this._removerBrilho();
+    this._removerBrilhoJogador();
   }
 
   private _finalizarJogo(mensagem: string): void {
     this.fimDeJogo = true;
+
+    // Parar spawn de bolas de poder
+    if (this.eventoSpawnBolas) {
+      this.eventoSpawnBolas.destroy();
+      this.eventoSpawnBolas = undefined;
+    }
 
     // Parar movimentos
     this.jogador1.velocidadeX = 0;
@@ -517,17 +559,15 @@ export class CenaJogo extends Phaser.Scene {
     const containers = document.querySelectorAll(".hud-container");
     containers.forEach((c) => ((c as HTMLElement).style.display = "none"));
 
-    // Tela preta total atras (fixa na camera)
-    const bgPreto = this.add
-      .rectangle(0, 0, LARGURA_JOGO, ALTURA_JOGO, 0x000000)
-      .setOrigin(0)
+    // Fundo semi-transparente para melhor legibilidade dos textos
+    const bgFiltro = this.add
+      .rectangle(LARGURA_JOGO / 2, ALTURA_JOGO / 2, LARGURA_JOGO, ALTURA_JOGO, 0x000000, 0.55)
       .setDepth(90)
-      .setAlpha(0)
-      .setInteractive()
-      .setScrollFactor(0); // FIXO NA TELA
+      .setScrollFactor(0)
+      .setAlpha(0);
 
     this.tweens.add({
-      targets: bgPreto,
+      targets: bgFiltro,
       alpha: 1,
       duration: 500,
     });
@@ -638,20 +678,22 @@ export class CenaJogo extends Phaser.Scene {
       const p = this.projeteis[i];
       p.sprite.x += p.velocidadeX * dt;
 
-      // Colisao com Jogador 2 (se o J1 disparou)
+      // Determinar o alvo baseado em quem atirou
+      const alvo = p.atacante === this.jogador1 ? this.jogador2 : this.jogador1;
+
       const dist = Phaser.Math.Distance.Between(
         p.sprite.x,
         p.sprite.y,
-        this.jogador2.sprite.x,
-        this.jogador2.sprite.y - 80,
+        alvo.sprite.x,
+        alvo.sprite.y - 80,
       );
       if (dist < 80) {
         // Causar dano massivo
-        this.jogador2.vida -= 40;
-        this.jogador2.vida = Math.max(0, this.jogador2.vida);
-        this.jogador2.sprite.setTint(0xff0000);
+        alvo.vida -= 40;
+        alvo.vida = Math.max(0, alvo.vida);
+        alvo.sprite.setTint(0xff0000);
         this.time.delayedCall(150, () => {
-          this.jogador2.sprite.clearTint();
+          alvo.sprite.clearTint();
         });
         this._criarParticulasImpacto(p.sprite.x, p.sprite.y);
 
@@ -854,7 +896,7 @@ export class CenaJogo extends Phaser.Scene {
           bola.sprite.y,
         );
         if (dist < 100) {
-          this._coletarBola(bola);
+          this._coletarBola(bola, jogador);
           break;
         }
       }
@@ -903,12 +945,10 @@ export class CenaJogo extends Phaser.Scene {
       if (querPegarBola) {
         jogador.decisaoIA = "bola";
       } else if (distanciaAbs > alcanceAtaque) {
-        // Longe: 60% atacar, 40% fugir (se vida baixa inverte)
         jogador.decisaoIA = vidaBaixa
           ? (Math.random() < 0.15 ? "atacar" : "fugir")
           : (Math.random() < 0.60 ? "atacar" : "fugir");
       } else {
-        // Perto: 50% recuar, 20% avançar, 30% parado (se vida baixa recua sempre)
         if (vidaBaixa) {
           jogador.decisaoIA = "recuar";
         } else {
@@ -918,15 +958,34 @@ export class CenaJogo extends Phaser.Scene {
       }
     }
 
-    // ── EXECUTAR DECISÃO ──
-    // Direção básica (pode ser sobrescrita abaixo)
     jogador.olhandoDireita = distancia > 0;
     jogador.sprite.setFlipX(!jogador.olhandoDireita);
+
+    // ── SUPER CHUTE DA IA ──────────────────────────────
+    // Se a IA estiver brilhando, dispara o super chute independente da distância
+    if (this.estaBrilhandoJ2 && !jogador.estaChutando && !this.superChuteEmAndamento) {
+      if (Math.random() < 0.08) {
+        this.superChuteEmAndamento = true;
+        jogador.estaChutando = true;
+        jogador.sprite.play("player_kick");
+
+        // A IA "clica" automaticamente - dispara o projétil na direção do jogador1
+        jogador.olhandoDireita = distancia > 0;
+        jogador.sprite.setFlipX(!jogador.olhandoDireita);
+        this._dispararProjetil(jogador);
+
+        jogador.sprite.once("animationcomplete", () => {
+          jogador.estaChutando = false;
+          this.superChuteEmAndamento = false;
+        });
+        return;
+      }
+    }
+    // ───────────────────────────────────────────────────
 
     switch (jogador.decisaoIA) {
       case "bola": {
         if (!bolaAlvo) {
-          // Bola foi removida entre a decisão e a execução — parar
           jogador.velocidadeX = 0;
           jogador.estaCorrendo = false;
           break;
@@ -936,7 +995,7 @@ export class CenaJogo extends Phaser.Scene {
         jogador.sprite.setFlipX(!jogador.olhandoDireita);
         jogador.velocidadeX = difBola > 0 ? VELOCIDADE_CORRER : -VELOCIDADE_CORRER;
         jogador.estaCorrendo = jogador.vigor > 20;
-        if (distBolaMenor < 80) { this._coletarBola(bolaAlvo); }
+        if (distBolaMenor < 80) { this._coletarBola(bolaAlvo, jogador); }
         break;
       }
       case "atacar": {
@@ -965,19 +1024,16 @@ export class CenaJogo extends Phaser.Scene {
     }
 
     // ── PULOS ──
-    // Pulo durante bola/atacar/fugir
     if ((jogador.decisaoIA === "bola" || jogador.decisaoIA === "atacar" || jogador.decisaoIA === "fugir")
         && jogador.noChao && Math.random() < 0.015) {
       jogador.velocidadeY = FORCA_PULO;
       jogador.noChao = false;
     }
-    // Pulo durante combate corpo a corpo
     if ((jogador.decisaoIA === "recuar" || jogador.decisaoIA === "parado")
         && jogador.noChao && Math.random() < 0.03) {
       jogador.velocidadeY = FORCA_PULO;
       jogador.noChao = false;
     }
-    // Pulo reativo
     if (jogador.noChao && ((yDiff < -100 && Math.random() < 0.08) || Math.random() < 0.008)) {
       jogador.velocidadeY = FORCA_PULO;
       jogador.noChao = false;
@@ -992,7 +1048,6 @@ export class CenaJogo extends Phaser.Scene {
       if (distanciaAbs < alcanceAtaque + 20) {
         if (Math.random() < 0.03 && jogador.vigor > 10) {
           jogador.sprite.play("player_punch");
-          // Ataque garantido: sem checagem de distância, o soco sempre acerta
           this.jogador1.vida -= 5;
           this.jogador1.vida = Math.max(0, this.jogador1.vida);
           this._criarParticulasImpacto(this.jogador1.sprite.x, this.jogador1.sprite.y - 80);
@@ -1003,7 +1058,6 @@ export class CenaJogo extends Phaser.Scene {
           jogador.vigor -= 5;
         } else if (Math.random() < 0.015 && jogador.vigor > 20) {
           jogador.sprite.play("player_kick");
-          // Ataque garantido para o chute também
           this.jogador1.vida -= 10;
           this.jogador1.vida = Math.max(0, this.jogador1.vida);
           this._criarParticulasImpacto(this.jogador1.sprite.x, this.jogador1.sprite.y - 80);
@@ -1064,7 +1118,6 @@ export class CenaJogo extends Phaser.Scene {
     defensor: DadosJogador,
     dano: number,
   ): void {
-    // Atraso curto para o dano coincidir com o meio da animação
     this.time.delayedCall(150, () => {
       const dist = Math.abs(atacante.sprite.x - defensor.sprite.x);
       const alturaOk = Math.abs(atacante.sprite.y - defensor.sprite.y) < 100;
@@ -1077,20 +1130,16 @@ export class CenaJogo extends Phaser.Scene {
         defensor.vida -= dano;
         defensor.vida = Math.max(0, defensor.vida);
 
-        // ─── ADICIONE ESTE BLOCO AQUI DENTRO ───
         if (atacante === this.jogador1) {
           this.estatisticas.socosConectados++;
-          this.estatisticas.pontosGladiador += 10; // Dá pontos para o estilo Gladiador
+          this.estatisticas.pontosGladiador += 10;
         }
-        // ───────────────────────────────────────
 
-        // Efeito visual de impacto
         defensor.sprite.setTint(0xff0000);
         this.time.delayedCall(100, () => {
           defensor.sprite.clearTint();
         });
 
-        // Partículas de impacto
         this._criarParticulasImpacto(defensor.sprite.x, defensor.sprite.y - 80);
       }
     });
@@ -1183,14 +1232,14 @@ export class CenaJogo extends Phaser.Scene {
       const estrelasGfx = this.add.graphics().setDepth(-1);
       for (let i = 0; i < 80; i++) {
         const ex = -128 + Math.random() * 1536;
-        const ey = -152 + Math.random() * 500; // Limitar ao topo estendido
+        const ey = -152 + Math.random() * 500;
         const tamanho = Math.random() * 2 + 0.5;
         estrelasGfx.fillStyle(0xffffff, Math.random() * 0.7 + 0.3);
         estrelasGfx.fillCircle(ex, ey, tamanho);
       }
       estrelasGfx.fillStyle(0xeeeedd, 0.9);
       estrelasGfx.fillCircle(LARGURA_JOGO - 50, -20, 35);
-      estrelasGfx.fillStyle(0x000000, 0.2); // Sombra suave da lua
+      estrelasGfx.fillStyle(0x000000, 0.2);
       estrelasGfx.fillCircle(LARGURA_JOGO - 40, -28, 30);
     }
 
@@ -1225,14 +1274,12 @@ export class CenaJogo extends Phaser.Scene {
   private _criarHUD(): void {
     const profundidade = 25;
 
-    // Esconder ao sair da cena
     this.events.once("shutdown", () => {
       const containers = document.querySelectorAll(".hud-container");
       containers.forEach((el) => ((el as HTMLElement).style.display = "none"));
       if (this.domHud.scoreboard) this.domHud.scoreboard.style.display = "none";
     });
 
-    // Referências do DOM
     this.domHud.h1 = document.getElementById("health-p1");
     this.domHud.h1Label = document.getElementById("health-label-p1");
     this.domHud.s1 = document.getElementById("stamina-p1");
@@ -1250,7 +1297,6 @@ export class CenaJogo extends Phaser.Scene {
     containers.forEach((c) => ((c as HTMLElement).style.display = "flex"));
     if (this.domHud.scoreboard) {
       this.domHud.scoreboard.style.display = "flex";
-      // Resetar estilos de vitoria (caso venha de um fim de jogo anterior)
       this.domHud.scoreboard.style.transition = "none";
       this.domHud.scoreboard.style.top = "20px";
       this.domHud.scoreboard.style.transform = "translateX(-50%) scale(1)";
@@ -1271,8 +1317,6 @@ export class CenaJogo extends Phaser.Scene {
       .setOrigin(0.5)
       .setDepth(profundidade)
       .setVisible(false);
-
-    // Texto de clima removido a pedido do usuario
 
     this._iniciarCronometro();
   }
@@ -1312,7 +1356,6 @@ export class CenaJogo extends Phaser.Scene {
     } else if (this.vitoriasJ2 > this.vitoriasJ1) {
       this._finalizarJogo("CPU VENCEU POR PONTOS!");
     } else {
-      // Empate ou critério de desempate por vida
       if (this.jogador1.vida > this.jogador2.vida) {
         this._finalizarJogo("EMPATE! VITÓRIA POR VIDA (J1)");
       } else {
@@ -1335,7 +1378,6 @@ export class CenaJogo extends Phaser.Scene {
       }
     };
 
-    // Atualizar Player 1
     updateBar(
       this.domHud.h1,
       this.domHud.h1Label,
@@ -1349,7 +1391,6 @@ export class CenaJogo extends Phaser.Scene {
       VIGOR_MAXIMO,
     );
 
-    // Atualizar Player 2
     updateBar(
       this.domHud.h2,
       this.domHud.h2Label,
@@ -1363,7 +1404,6 @@ export class CenaJogo extends Phaser.Scene {
       VIGOR_MAXIMO,
     );
 
-    // Ícones de exaustão sobre a cabeça
     this.iconeExaustoJ1.setVisible(this.jogador1.estaExausto);
     this.iconeExaustoJ1.setPosition(
       this.jogador1.sprite.x,

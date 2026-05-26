@@ -55,7 +55,7 @@ export class CenaInicializacao extends Phaser.Scene {
     this.load.spritesheet('p_pulando', pulandoUrl, { frameWidth: Math.floor(2560 / 5), frameHeight: 1440 });
     this.load.spritesheet('p_soco', socoUrl, { frameWidth: Math.floor(2560 / 3), frameHeight: 1440 });
 
-    this.load.image('bola_poder', bolaPoderUrl);
+    this.load.spritesheet('bola_poder', bolaPoderUrl, { frameWidth: Math.floor(582 / 4), frameHeight: 429 });
     this.load.image('bola_chutada', bolaChutadaUrl);
     this.load.image('placar', placarUrl);
     this.load.image('inicial', inicialUrl);
@@ -143,6 +143,14 @@ export class CenaInicializacao extends Phaser.Scene {
       key: 'player_exhausted',
       frames: this.anims.generateFrameNumbers('p_parado', { start: 0, end: 1 }),
       frameRate: 4,
+      repeat: -1
+    });
+
+    // Bola de Poder — 4 frames animados
+    this.anims.create({
+      key: 'bola_poder_anim',
+      frames: this.anims.generateFrameNumbers('bola_poder', { start: 0, end: 3 }),
+      frameRate: 8,
       repeat: -1
     });
   }

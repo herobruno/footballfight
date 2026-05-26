@@ -220,15 +220,15 @@ export class CenaJogo extends Phaser.Scene {
     });
     // ────────────────────────────────────────────────────────
 
-    // Prompt de interação (E com seta para baixo)
+    // Prompt de interação (E com seta apontando para bola)
     this.promptInteracao = this.add
-      .text(0, 0, "E\n↓", {
+      .text(0, 0, "[ E ]\n↓", {
         fontFamily: "Orbitron, monospace",
-        fontSize: "24px",
+        fontSize: "20px",
         fontStyle: "bold",
         color: "#00ffff",
         stroke: "#000000",
-        strokeThickness: 4,
+        strokeThickness: 5,
         align: "center",
       })
       .setOrigin(0.5, 1)
@@ -268,8 +268,9 @@ export class CenaJogo extends Phaser.Scene {
     const sprite = this.add
       .sprite(x, -50, "bola_poder")
       .setOrigin(0.5, 1)
-      .setDepth(8);
-    sprite.setScale(0.08);
+      .setDepth(8)
+      .setScale(0.35);
+    sprite.play("bola_poder_anim");
 
     // Partículas de raio ao redor da bola
     const emissor = this.add.particles(0, 0, "particula", {
@@ -671,8 +672,6 @@ export class CenaJogo extends Phaser.Scene {
   }
 
   private _atualizarBolasDePoder(dt: number): void {
-    let alguemPerto = false;
-
     for (let i = this.bolasDePoder.length - 1; i >= 0; i--) {
       const bola = this.bolasDePoder[i];
       if (bola.sprite.y < CHAO_Y) {
@@ -683,22 +682,14 @@ export class CenaJogo extends Phaser.Scene {
           bola.velocidadeY = 0;
         }
       }
-
-      // Checar proximidade com jogador 1
-      const dist = Phaser.Math.Distance.Between(
-        this.jogador1.sprite.x,
-        this.jogador1.sprite.y,
-        bola.sprite.x,
-        bola.sprite.y,
-      );
-      if (dist < 100) {
-        this.promptInteracao.setPosition(bola.sprite.x, bola.sprite.y - 60);
-        this.promptInteracao.setVisible(true);
-        alguemPerto = true;
-      }
     }
 
-    if (!alguemPerto) {
+    // Prompt sempre visível na primeira bola que existir
+    if (this.bolasDePoder.length > 0) {
+      const primeiraBola = this.bolasDePoder[0];
+      this.promptInteracao.setPosition(primeiraBola.sprite.x, primeiraBola.sprite.y - 160);
+      this.promptInteracao.setVisible(true);
+    } else {
       this.promptInteracao.setVisible(false);
     }
   }

@@ -15,54 +15,9 @@ export class CenaMenu extends Phaser.Scene {
   }
 
   create(): void {
-    // ── Fundo Gradiente Estilo PS1 (Verde e Marrom) ──────────────
-    const fundo = this.add.graphics();
-    this._desenharFundo(fundo);
-
-    // ── Partículas de "Grama/Terra" ────────────────
-    this.particulasGfx = this.add.graphics();
-    for (let i = 0; i < 40; i++) {
-      this.particulas.push({
-        x: Math.random() * LARGURA_JOGO,
-        y: Math.random() * ALTURA_JOGO,
-        vx: (Math.random() - 0.5) * 0.4,
-        vy: Math.random() * 0.2 + 0.1,
-        alfa: Math.random() * 0.5 + 0.5,
-        tamanho: Math.random() * 4 + 2,
-      });
-    }
-
-    // ── Título ───────────────────────────────
-    const tituloY = 200;
-
-    // Sombra do Título (Preto)
-    this.add.text(LARGURA_JOGO / 2 + 4, tituloY + 4, 'FUTEBOL\nFIGHT', {
-      fontFamily: 'Orbitron, monospace',
-      fontSize: '80px',
-      fontStyle: '900',
-      color: '#000000',
-      align: 'center',
-      lineSpacing: 10,
-    }).setOrigin(0.5);
-
-    // Título Principal (Branco)
-    const titulo = this.add.text(LARGURA_JOGO / 2, tituloY, 'FUTEBOL\nFIGHT', {
-      fontFamily: 'Orbitron, monospace',
-      fontSize: '80px',
-      fontStyle: '900',
-      color: '#ffffff',
-      align: 'center',
-      lineSpacing: 10,
-    }).setOrigin(0.5);
-
-    // ── Subtítulo ────────────────────────────
-    this.add.text(LARGURA_JOGO / 2, tituloY + 110, 'ARENA DE COMBATE', {
-      fontFamily: 'Orbitron, monospace',
-      fontSize: '20px',
-      color: '#ffffff',
-      backgroundColor: '#000000',
-      padding: { x: 10, y: 5 },
-    }).setOrigin(0.5);
+    // ── Fundo com a imagem inicial.png ────────────────────
+    this.add.image(LARGURA_JOGO / 2, ALTURA_JOGO / 2, 'inicial')
+      .setDisplaySize(LARGURA_JOGO, ALTURA_JOGO);
 
     // ── Botão Iniciar (Estilo PS1 - Bloco) ────────────────────────
     this._criarBotao(LARGURA_JOGO / 2, 460, 'INICIAR JOGO', 0x27ae60, () => {
@@ -81,8 +36,6 @@ export class CenaMenu extends Phaser.Scene {
     }).setOrigin(0.5);
 
     this.cameras.main.fadeIn(500, 0, 0, 0);
-
-    this.events.on('update', this._atualizarParticulas, this);
   }
 
   private _desenharFundo(gfx: Phaser.GameObjects.Graphics): void {

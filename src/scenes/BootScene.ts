@@ -10,6 +10,7 @@ import fundoUrl from '../assets/sprites/imagem_fundo.png';
 import bolaPoderUrl from '../assets/fx/bola_poder_parada.png';
 import bolaChutadaUrl from '../assets/fx/bola_poder_chutada.png';
 import placarUrl from '../assets/ui/placar.png';
+import inicialUrl from '../assets/ui/inicial.png';
 import estadioUrl from '../assets/ui/estadio.jpeg';
 
 export class CenaInicializacao extends Phaser.Scene {
@@ -56,6 +57,7 @@ export class CenaInicializacao extends Phaser.Scene {
     this.load.image('bola_poder', bolaPoderUrl);
     this.load.image('bola_chutada', bolaChutadaUrl);
     this.load.image('placar', placarUrl);
+    this.load.image('inicial', inicialUrl);
 
     // Fundo do Estádio
     this.load.image('estadio', fundoUrl);

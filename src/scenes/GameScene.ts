@@ -1166,6 +1166,11 @@ export class CenaJogo extends Phaser.Scene {
   private _desenharArena(): void {
     const ciclo = this.cicloHorario;
 
+    // Fundo do Céu (Atrás do estádio)
+    const skyGfx = this.add.graphics().setDepth(-2);
+    skyGfx.fillGradientStyle(ciclo.ceuTopo, ciclo.ceuTopo, ciclo.ceuBase, ciclo.ceuBase, 1);
+    skyGfx.fillRect((LARGURA_JOGO - 1536) / 2, (ALTURA_JOGO - 1024) / 2, 1536, 1024);
+
     const fundoEstadio = this.add.image(
       LARGURA_JOGO / 2,
       ALTURA_JOGO / 2,
@@ -1182,26 +1187,26 @@ export class CenaJogo extends Phaser.Scene {
       1024,
     );
 
-    // Astros Dinâmicos (Estrelas, Lua, Sol) sobre o fundo
+    // Astros Dinâmicos (Estrelas, Lua, Sol) atrás do estádio, mas na frente do céu
     if (ciclo.nome === "noite") {
-      const estrelasGfx = this.add.graphics().setDepth(1);
-      for (let i = 0; i < 60; i++) {
-        const ex = Math.random() * LARGURA_JOGO;
-        const ey = Math.random() * 300; // Limitar ao topo
+      const estrelasGfx = this.add.graphics().setDepth(-1);
+      for (let i = 0; i < 80; i++) {
+        const ex = -128 + Math.random() * 1536;
+        const ey = -152 + Math.random() * 500; // Limitar ao topo estendido
         const tamanho = Math.random() * 2 + 0.5;
         estrelasGfx.fillStyle(0xffffff, Math.random() * 0.7 + 0.3);
         estrelasGfx.fillCircle(ex, ey, tamanho);
       }
       estrelasGfx.fillStyle(0xeeeedd, 0.9);
-      estrelasGfx.fillCircle(LARGURA_JOGO - 150, 80, 35);
+      estrelasGfx.fillCircle(LARGURA_JOGO - 50, -20, 35);
       estrelasGfx.fillStyle(0x000000, 0.2); // Sombra suave da lua
-      estrelasGfx.fillCircle(LARGURA_JOGO - 140, 72, 30);
+      estrelasGfx.fillCircle(LARGURA_JOGO - 40, -28, 30);
     }
 
     if (ciclo.nome === "manha" || ciclo.nome === "golden") {
-      const solGfx = this.add.graphics().setDepth(1);
-      const solX = ciclo.nome === "manha" ? 200 : LARGURA_JOGO - 200;
-      const solY = ciclo.nome === "manha" ? 100 : 120;
+      const solGfx = this.add.graphics().setDepth(-1);
+      const solX = ciclo.nome === "manha" ? 100 : LARGURA_JOGO - 100;
+      const solY = ciclo.nome === "manha" ? -20 : 0;
       solGfx.fillStyle(0xffee58, 0.15);
       solGfx.fillCircle(solX, solY, 80);
       solGfx.fillStyle(0xffee58, 0.25);
@@ -1214,8 +1219,8 @@ export class CenaJogo extends Phaser.Scene {
       .rectangle(
         LARGURA_JOGO / 2,
         ALTURA_JOGO / 2,
-        LARGURA_JOGO,
-        ALTURA_JOGO,
+        1536,
+        1024,
         ciclo.corAmbiente,
         ciclo.alfaAmbiente,
       )
@@ -1276,19 +1281,7 @@ export class CenaJogo extends Phaser.Scene {
       .setDepth(profundidade)
       .setVisible(false);
 
-    this.add
-      .text(
-        LARGURA_JOGO / 2,
-        ALTURA_JOGO - 15,
-        `🕐 ${this.cicloHorario.rotuloPt}`,
-        {
-          fontFamily: "Outfit, sans-serif",
-          fontSize: "12px",
-          color: "#ffffff80",
-        },
-      )
-      .setOrigin(0.5)
-      .setDepth(profundidade);
+    // Texto de clima removido a pedido do usuario
 
     this._iniciarCronometro();
   }

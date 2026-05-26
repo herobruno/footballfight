@@ -7,11 +7,26 @@
     <meta name="description" content="FutebolFight: modalidade híbrida extrema de futebol e luta. Domine a arena!" />
     <link rel="preconnect" href="https://fonts.googleapis.com" />
     <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
-    <link href="https://fonts.googleapis.com/css2?family=Outfit:wght@400;600;700;900&family=Orbitron:wght@500;700;900&display=swap" rel="stylesheet" />
+    <link href="https://fonts.googleapis.com/css2?family=Bangers&family=Outfit:wght@400;600;700;900&family=Orbitron:wght@500;700;900&display=swap" rel="stylesheet" />
     <style>
+      :root {
+        /* Background */
+        --bg-main:      #080E17;
+        --bg-secondary: #0C2857;
+        /* Blues */
+        --blue-primary:   #004DD6;
+        --blue-secondary: #053991;
+        --blue-glow:      #0C439F;
+        /* Text */
+        --white:      #F1F1F1;
+        /* Neutral */
+        --metal:      #55575C;
+        --gray-blue:  #374459;
+      }
+
       * { margin: 0; padding: 0; box-sizing: border-box; }
       body {
-        background: #000;
+        background: var(--bg-main);
         overflow: hidden;
         display: flex;
         justify-content: center;
@@ -42,20 +57,21 @@
         gap: 8px;
         width: 380px;
         pointer-events: none;
-        font-family: 'Orbitron', sans-serif;
+        font-family: 'Bangers', cursive;
       }
       #hud-p1 { left: 40px; }
       #hud-p2 { right: 40px; text-align: right; }
       #hud-p2 .bar-wrapper { flex-direction: row-reverse; }
 
       .player-name {
-        color: #fff;
+        color: var(--white);
         font-weight: 900;
-        font-size: 18px;
+        font-size: 20px;
+        font-family: 'Bangers', cursive;
         text-transform: uppercase;
-        letter-spacing: 2px;
+        letter-spacing: 3px;
         margin-bottom: 4px;
-        text-shadow: 0 0 10px rgba(255, 255, 255, 0.5);
+        text-shadow: 0 0 12px rgba(0, 77, 214, 0.7);
       }
       #hud-p1 .player-name { color: #00ffff; }
       #hud-p2 .player-name { color: #ff3e3e; }
@@ -74,12 +90,12 @@
       .bar-container {
         flex: 1;
         height: 18px;
-        background: rgba(0, 0, 0, 0.7);
-        border: 2px solid #fff;
+        background: rgba(8, 14, 23, 0.85);
+        border: 2px solid var(--gray-blue);
         position: relative;
         transform: skewX(-15deg);
         overflow: hidden;
-        box-shadow: 0 0 10px rgba(0, 0, 0, 0.5);
+        box-shadow: 0 0 10px rgba(0, 77, 214, 0.3);
       }
 
       .bar-fill {
@@ -97,8 +113,8 @@
         box-shadow: 0 0 15px rgba(241, 196, 15, 0.6);
       }
 
-      #hud-p1 .health-bar { border-color: #00ffff; }
-      #hud-p2 .health-bar { border-color: #ff3e3e; }
+      #hud-p1 .health-bar { border-color: #00ffff; box-shadow: 0 0 8px rgba(0,255,255,0.4); }
+      #hud-p2 .health-bar { border-color: #ff3e3e; box-shadow: 0 0 8px rgba(255,62,62,0.4); }
 
       .bar-label {
         position: absolute;
@@ -123,45 +139,45 @@
         justify-content: center;
         z-index: 150;
         pointer-events: none;
-        font-family: 'Orbitron', sans-serif;
+        font-family: 'Bangers', cursive;
         filter: 
           drop-shadow(2px 0 0 #000) 
           drop-shadow(-2px 0 0 #000) 
           drop-shadow(0 2px 0 #000) 
           drop-shadow(0 -2px 0 #000)
-          drop-shadow(0 4px 8px rgba(0,0,0,0.5));
+          drop-shadow(0 4px 12px rgba(0, 77, 214, 0.5));
       }
 
       .team-box {
-        background: #111;
+        background: var(--bg-secondary);
         height: 35px;
         display: flex;
         align-items: center;
         padding: 0 25px;
-        color: #fff;
+        color: var(--white);
         font-weight: 700;
-        font-size: 11px;
-        letter-spacing: 1px;
+        font-size: 13px;
+        letter-spacing: 2px;
         position: relative;
         overflow: hidden;
       }
 
       .team-p1 {
         clip-path: polygon(15px 0%, 100% 0%, 100% 100%, 15px 100%, 0% 50%);
-        background: linear-gradient(90deg, #660000, #222);
+        background: linear-gradient(90deg, #660000, var(--bg-secondary));
         border-left: 2px solid #ff3e3e;
         margin-right: -15px;
       }
 
       .team-p2 {
         clip-path: polygon(0% 0%, calc(100% - 15px) 0%, 100% 50%, calc(100% - 15px) 100%, 0% 100%);
-        background: linear-gradient(270deg, #004466, #222);
+        background: linear-gradient(270deg, var(--blue-secondary), var(--bg-secondary));
         border-right: 2px solid #00ffff;
         margin-left: -15px;
       }
 
       .score-center {
-        background: #0a0a0a;
+        background: var(--bg-main);
         height: 48px;
         width: 100px;
         display: flex;
@@ -169,10 +185,10 @@
         align-items: center;
         justify-content: center;
         clip-path: polygon(15% 0%, 85% 0%, 100% 50%, 85% 100%, 15% 100%, 0% 50%);
-        border: 2px solid #333;
+        border: 2px solid var(--gray-blue);
         position: relative;
         z-index: 5;
-        box-shadow: inset 0 0 15px rgba(0,255,255,0.1);
+        box-shadow: inset 0 0 15px rgba(0, 77, 214, 0.2);
       }
 
       .score-display {
@@ -197,11 +213,11 @@
       }
 
       .game-timer {
-        font-size: 8px;
-        color: #00ffff;
+        font-size: 9px;
+        color: var(--blue-primary);
         margin-top: 1px;
-        font-weight: 600;
-        letter-spacing: 1px;
+        font-family: 'Bangers', cursive;
+        letter-spacing: 2px;
       }
 
       #game-container::after {
@@ -209,8 +225,8 @@
         display: block;
         position: absolute;
         top: 0; left: 0; bottom: 0; right: 0;
-        background: linear-gradient(rgba(18, 16, 16, 0) 50%, rgba(0, 0, 0, 0.1) 50%), 
-                    linear-gradient(90deg, rgba(255, 0, 0, 0.03), rgba(0, 255, 0, 0.01), rgba(0, 0, 255, 0.03));
+        background: linear-gradient(rgba(8, 14, 23, 0) 50%, rgba(0, 0, 0, 0.12) 50%), 
+                    linear-gradient(90deg, rgba(0, 77, 214, 0.03), rgba(0, 255, 0, 0.01), rgba(0, 77, 214, 0.03));
         z-index: 1000;
         background-size: 100% 4px, 3px 100%;
         pointer-events: none;

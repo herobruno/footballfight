@@ -12,6 +12,7 @@ import bolaChutadaUrl from '../assets/fx/bola_poder_chutada.png';
 import placarUrl from '../assets/ui/placar.png';
 import inicialUrl from '../assets/ui/inicial.png';
 import estadioUrl from '../assets/ui/estadio.jpeg';
+import { UniformPipeline } from '../pipelines/UniformPipeline';
 
 export class CenaInicializacao extends Phaser.Scene {
   constructor() {
@@ -64,6 +65,9 @@ export class CenaInicializacao extends Phaser.Scene {
   }
 
   create(): void {
+    if (this.renderer instanceof Phaser.Renderer.WebGL.WebGLRenderer) {
+      this.renderer.pipelines.addPostPipeline('UniformPipeline', UniformPipeline);
+    }
     this._gerarTexturas();
     this._criarAnimacoes();
     this.scene.start('CenaMenu');

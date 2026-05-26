@@ -17,6 +17,7 @@ import {
   type OpcaoUniforme,
 } from "../constantes";
 import { obterEstado } from "../estado";
+import { hexToRgbNormalized } from "../pipelines/UniformPipeline";
 
 // ─── Dados do Jogador ────────────────────────
 interface DadosJogador {
@@ -649,12 +650,7 @@ export class CenaJogo extends Phaser.Scene {
         this.jogador2.vida = Math.max(0, this.jogador2.vida);
         this.jogador2.sprite.setTint(0xff0000);
         this.time.delayedCall(150, () => {
-          const uniforme = UNIFORMES.find(
-            (u) => u.id === this.jogador2.idUniforme,
-          );
-          this.jogador2.sprite.setTint(
-            uniforme ? uniforme.corPrimaria : 0xffffff,
-          );
+          this.jogador2.sprite.clearTint();
         });
         this._criarParticulasImpacto(p.sprite.x, p.sprite.y);
 
@@ -742,6 +738,20 @@ export class CenaJogo extends Phaser.Scene {
   }
 
   // ═══════════════════════════════════════════
+  private _aplicarPipelineUniforme(sprite: Phaser.GameObjects.Sprite, uniforme: OpcaoUniforme): void {
+    if (this.renderer instanceof Phaser.Renderer.WebGL.WebGLRenderer) {
+      sprite.setPostPipeline('UniformPipeline');
+      const pipeline = sprite.getPostPipeline('UniformPipeline') as any;
+      if (pipeline) {
+        pipeline.uPrimaryColor = hexToRgbNormalized(uniforme.corPrimaria);
+        pipeline.uSecondaryColor = hexToRgbNormalized(uniforme.corSecundaria);
+        pipeline.uDestaqueColor = hexToRgbNormalized(uniforme.corDestaque);
+      }
+    } else {
+      sprite.setTint(uniforme.corPrimaria);
+    }
+  }
+
   //  CRIAÇÃO DO JOGADOR
   // ═══════════════════════════════════════════
   private _criarJogador(
@@ -758,7 +768,7 @@ export class CenaJogo extends Phaser.Scene {
 
     const uniforme = UNIFORMES.find((u: OpcaoUniforme) => u.id === idUniforme);
     if (uniforme) {
-      sprite.setTint(uniforme.corPrimaria);
+      this._aplicarPipelineUniforme(sprite, uniforme);
     }
 
     sprite.play("player_idle");
@@ -997,8 +1007,7 @@ export class CenaJogo extends Phaser.Scene {
           this._criarParticulasImpacto(this.jogador1.sprite.x, this.jogador1.sprite.y - 80);
           this.jogador1.sprite.setTint(0xff0000);
           this.time.delayedCall(100, () => {
-            const uniforme = UNIFORMES.find((u) => u.id === this.jogador1.idUniforme);
-            this.jogador1.sprite.setTint(uniforme ? uniforme.corPrimaria : 0xffffff);
+            this.jogador1.sprite.clearTint();
           });
           jogador.vigor -= 5;
         } else if (Math.random() < 0.015 && jogador.vigor > 20) {
@@ -1009,8 +1018,7 @@ export class CenaJogo extends Phaser.Scene {
           this._criarParticulasImpacto(this.jogador1.sprite.x, this.jogador1.sprite.y - 80);
           this.jogador1.sprite.setTint(0xff0000);
           this.time.delayedCall(100, () => {
-            const uniforme = UNIFORMES.find((u) => u.id === this.jogador1.idUniforme);
-            this.jogador1.sprite.setTint(uniforme ? uniforme.corPrimaria : 0xffffff);
+            this.jogador1.sprite.clearTint();
           });
           jogador.vigor -= 10;
         }
@@ -1088,8 +1096,7 @@ export class CenaJogo extends Phaser.Scene {
         // Efeito visual de impacto
         defensor.sprite.setTint(0xff0000);
         this.time.delayedCall(100, () => {
-          const uniforme = UNIFORMES.find((u) => u.id === defensor.idUniforme);
-          defensor.sprite.setTint(uniforme ? uniforme.corPrimaria : 0xffffff);
+          defensor.sprite.clearTint();
         });
 
         // Partículas de impacto

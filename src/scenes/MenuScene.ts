@@ -30,9 +30,10 @@ export class CenaMenu extends Phaser.Scene {
 
     // ── Créditos ───────────────────────
     this.add.text(LARGURA_JOGO / 2, ALTURA_JOGO - 40, '© 1998 DEEPMIND GAMES - LICENSED BY PS1', {
-      fontFamily: 'monospace',
-      fontSize: '14px',
-      color: '#ffffff',
+      fontFamily: "'Bangers', cursive",
+      fontSize: '16px',
+      color: '#004DD6',
+      letterSpacing: 2,
     }).setOrigin(0.5);
 
     this.cameras.main.fadeIn(500, 0, 0, 0);
@@ -63,23 +64,38 @@ export class CenaMenu extends Phaser.Scene {
     }
   }
 
-  private _criarBotao(x: number, y: number, rotulo: string, cor: number, aoClicar: () => void): void {
+  private _criarBotao(x: number, y: number, rotulo: string, _cor: number, aoClicar: () => void): void {
     const larg = 300;
-    const alt = 60;
+    const alt  = 60;
     const container = this.add.container(x, y);
 
-    // Botão estilo PS1: Borda branca grossa, fundo preto/verde
+    // Botão arena: gradiente escuro + borda cinza-azulada
     const fundo = this.add.graphics();
-    fundo.fillStyle(0x000000, 1);
-    fundo.fillRect(-larg/2, -alt/2, larg, alt);
-    fundo.lineStyle(4, 0xffffff, 1);
-    fundo.strokeRect(-larg/2, -alt/2, larg, alt);
+
+    const _desenharNormal = () => {
+      fundo.clear();
+      // Simula linear-gradient(180deg, #1A1D24, #080E17)
+      fundo.fillGradientStyle(0x1A1D24, 0x1A1D24, 0x080E17, 0x080E17, 1);
+      fundo.fillRect(-larg/2, -alt/2, larg, alt);
+      fundo.lineStyle(2, 0x374459, 1);
+      fundo.strokeRect(-larg/2, -alt/2, larg, alt);
+    };
+
+    const _desenharHover = () => {
+      fundo.clear();
+      fundo.fillGradientStyle(0x0C439F, 0x0C439F, 0x053991, 0x053991, 1);
+      fundo.fillRect(-larg/2, -alt/2, larg, alt);
+      fundo.lineStyle(2, 0x004DD6, 1);
+      fundo.strokeRect(-larg/2, -alt/2, larg, alt);
+    };
+
+    _desenharNormal();
 
     const texto = this.add.text(0, 0, rotulo, {
-      fontFamily: 'Orbitron, monospace',
-      fontSize: '22px',
-      color: '#ffffff',
-      fontStyle: 'bold',
+      fontFamily: "'Bangers', cursive",
+      fontSize: '26px',
+      color: '#F1F1F1',
+      letterSpacing: 2,
     }).setOrigin(0.5);
 
     container.add([fundo, texto]);
@@ -87,22 +103,15 @@ export class CenaMenu extends Phaser.Scene {
     container.setInteractive({ useHandCursor: true });
 
     container.on('pointerover', () => {
-      fundo.clear();
-      fundo.fillStyle(0x27ae60, 1); // Verde ao passar o mouse
-      fundo.fillRect(-larg/2, -alt/2, larg, alt);
-      fundo.lineStyle(4, 0xffffff, 1);
-      fundo.strokeRect(-larg/2, -alt/2, larg, alt);
+      _desenharHover();
+      this.tweens.add({ targets: container, scaleX: 1.04, scaleY: 1.04, duration: 120 });
     });
-
     container.on('pointerout', () => {
-      fundo.clear();
-      fundo.fillStyle(0x000000, 1);
-      fundo.fillRect(-larg/2, -alt/2, larg, alt);
-      fundo.lineStyle(4, 0xffffff, 1);
-      fundo.strokeRect(-larg/2, -alt/2, larg, alt);
+      _desenharNormal();
+      this.tweens.add({ targets: container, scaleX: 1, scaleY: 1, duration: 120 });
     });
-
     container.on('pointerdown', () => {
+      this.tweens.add({ targets: container, scaleX: 0.96, scaleY: 0.96, duration: 80 });
       aoClicar();
     });
   }

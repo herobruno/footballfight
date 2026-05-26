@@ -73,19 +73,19 @@ export interface OpcaoUniforme {
 
 export const UNIFORMES: OpcaoUniforme[] = [
   {
-    id: 'verde',
-    nomeTime: 'Palmeiras Retro',
-    corPrimaria: 0x27ae60,
-    corSecundaria: 0xffffff,
-    corDestaque: 0xffffff,
-    rotuloPt: 'Esquadrão Verde',
+    id: 'azul',
+    nomeTime: 'Garra',
+    corPrimaria: 0x004DD6,    // Azul neon principal
+    corSecundaria: 0xF1F1F1,  // Branco da fonte
+    corDestaque: 0x0C439F,    // Azul brilho
+    rotuloPt: 'Garra',
   },
   {
-    id: 'marrom',
-    nomeTime: 'Clube do Barro',
-    corPrimaria: 0x5d4037,
-    corSecundaria: 0x000000,
-    corDestaque: 0xd35400,
-    rotuloPt: 'Guerreiros de Terra',
+    id: 'branco',
+    nomeTime: 'Sangue Futebol',
+    corPrimaria: 0xF1F1F1,    // Branco da fonte
+    corSecundaria: 0x004DD6,  // Azul neon principal
+    corDestaque: 0x374459,    // Cinza azulado
+    rotuloPt: 'Sangue Futebol',
   },
 ];

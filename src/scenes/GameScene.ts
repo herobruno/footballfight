@@ -33,6 +33,9 @@ interface DadosJogador {
   quadroAnim: number;
   timerAnim: number;
   estaChutando: boolean;
+  // Timer para evitar tremor da IA
+  timerDecisaoIA: number;
+  decisaoIA: "atacar" | "fugir" | "bola" | "recuar" | "parado" | "nenhuma";
 }
 
 export class CenaJogo extends Phaser.Scene {
@@ -774,6 +777,8 @@ export class CenaJogo extends Phaser.Scene {
       quadroAnim: 0,
       timerAnim: 0,
       estaChutando: false,
+      timerDecisaoIA: 0,
+      decisaoIA: "nenhuma" as const,
     };
   }
 
@@ -856,9 +861,9 @@ export class CenaJogo extends Phaser.Scene {
   }
 
   // ═══════════════════════════════════════════
-  //  IA SIMPLES (Jogador 2 - CPU)
+  //  IA (Jogador 2 - CPU) com timer anti-tremor
   // ═══════════════════════════════════════════
-  private _atualizarIA(jogador: DadosJogador, _dt: number): void {
+  private _atualizarIA(jogador: DadosJogador, dt: number): void {
     if (this.fimDeJogo) {
       jogador.velocidadeX = 0;
       return;
@@ -868,51 +873,145 @@ export class CenaJogo extends Phaser.Scene {
     const distancia = alvo.x - jogador.sprite.x;
     const distanciaAbs = Math.abs(distancia);
     const yDiff = alvo.y - jogador.sprite.y;
-
-    // Decisão de Direção
-    jogador.olhandoDireita = distancia > 0;
-    jogador.sprite.setFlipX(!jogador.olhandoDireita);
-
-    // Movimentação
     const alcanceAtaque = 100;
+    const vidaBaixa = jogador.vida < 30;
 
-    if (distanciaAbs > alcanceAtaque) {
-      // Se estiver longe, corre em direção ao jogador
-      const velocidade =
-        distanciaAbs > 300 ? VELOCIDADE_CORRER * 0.9 : VELOCIDADE_ANDAR;
-      jogador.velocidadeX = distancia > 0 ? velocidade : -velocidade;
-      jogador.estaCorrendo = distanciaAbs > 300 && jogador.vigor > 20;
-    } else {
-      // Se estiver muito perto, para para bater
-      jogador.velocidadeX = 0;
-      jogador.estaCorrendo = false;
-    }
-
-    // Pulo reativo (se o jogador pular ou ocasionalmente)
-    if (jogador.noChao) {
-      if ((yDiff < -100 && Math.random() < 0.05) || Math.random() < 0.005) {
-        jogador.velocidadeY = FORCA_PULO;
-        jogador.noChao = false;
+    // ── Verificar bola de poder no chão ──
+    let bolaAlvo: typeof this.bolasDePoder[0] | null = null;
+    let distBolaMenor = Infinity;
+    for (const bola of this.bolasDePoder) {
+      if (bola.sprite.y >= CHAO_Y) {
+        const db = Phaser.Math.Distance.Between(
+          jogador.sprite.x, jogador.sprite.y,
+          bola.sprite.x, bola.sprite.y,
+        );
+        if (db < distBolaMenor) { distBolaMenor = db; bolaAlvo = bola; }
       }
     }
 
-    // Combate agressivo
+    // ── TIMER DE DECISÃO: só reavalia depois de 0.5s ──
+    const duracaoDecisao = 0.5; // segundos
+    jogador.timerDecisaoIA -= dt;
+
+    if (jogador.timerDecisaoIA <= 0) {
+      jogador.timerDecisaoIA = duracaoDecisao;
+
+      // Escolher nova decisão
+      const querPegarBola = bolaAlvo !== null && distBolaMenor < 400;
+
+      if (querPegarBola) {
+        jogador.decisaoIA = "bola";
+      } else if (distanciaAbs > alcanceAtaque) {
+        // Longe: 60% atacar, 40% fugir (se vida baixa inverte)
+        jogador.decisaoIA = vidaBaixa
+          ? (Math.random() < 0.15 ? "atacar" : "fugir")
+          : (Math.random() < 0.60 ? "atacar" : "fugir");
+      } else {
+        // Perto: 50% recuar, 20% avançar, 30% parado (se vida baixa recua sempre)
+        if (vidaBaixa) {
+          jogador.decisaoIA = "recuar";
+        } else {
+          const r = Math.random();
+          jogador.decisaoIA = r < 0.50 ? "recuar" : r < 0.70 ? "atacar" : "parado";
+        }
+      }
+    }
+
+    // ── EXECUTAR DECISÃO ──
+    // Direção básica (pode ser sobrescrita abaixo)
+    jogador.olhandoDireita = distancia > 0;
+    jogador.sprite.setFlipX(!jogador.olhandoDireita);
+
+    switch (jogador.decisaoIA) {
+      case "bola": {
+        if (!bolaAlvo) {
+          // Bola foi removida entre a decisão e a execução — parar
+          jogador.velocidadeX = 0;
+          jogador.estaCorrendo = false;
+          break;
+        }
+        const difBola = bolaAlvo.sprite.x - jogador.sprite.x;
+        jogador.olhandoDireita = difBola > 0;
+        jogador.sprite.setFlipX(!jogador.olhandoDireita);
+        jogador.velocidadeX = difBola > 0 ? VELOCIDADE_CORRER : -VELOCIDADE_CORRER;
+        jogador.estaCorrendo = jogador.vigor > 20;
+        if (distBolaMenor < 80) { this._coletarBola(bolaAlvo); }
+        break;
+      }
+      case "atacar": {
+        const vel = distanciaAbs > 300 ? VELOCIDADE_CORRER * 0.8 : VELOCIDADE_ANDAR;
+        jogador.velocidadeX = distancia > 0 ? vel : -vel;
+        jogador.estaCorrendo = distanciaAbs > 300 && jogador.vigor > 20;
+        break;
+      }
+      case "fugir": {
+        const vel = distanciaAbs > 300 ? VELOCIDADE_CORRER * 0.7 : VELOCIDADE_ANDAR * 0.8;
+        jogador.velocidadeX = distancia > 0 ? -vel : vel;
+        jogador.estaCorrendo = distanciaAbs > 300 && jogador.vigor > 20;
+        break;
+      }
+      case "recuar": {
+        jogador.velocidadeX = distancia > 0 ? -VELOCIDADE_ANDAR * 0.8 : VELOCIDADE_ANDAR * 0.8;
+        jogador.estaCorrendo = false;
+        break;
+      }
+      case "parado":
+      default: {
+        jogador.velocidadeX = 0;
+        jogador.estaCorrendo = false;
+        break;
+      }
+    }
+
+    // ── PULOS ──
+    // Pulo durante bola/atacar/fugir
+    if ((jogador.decisaoIA === "bola" || jogador.decisaoIA === "atacar" || jogador.decisaoIA === "fugir")
+        && jogador.noChao && Math.random() < 0.015) {
+      jogador.velocidadeY = FORCA_PULO;
+      jogador.noChao = false;
+    }
+    // Pulo durante combate corpo a corpo
+    if ((jogador.decisaoIA === "recuar" || jogador.decisaoIA === "parado")
+        && jogador.noChao && Math.random() < 0.03) {
+      jogador.velocidadeY = FORCA_PULO;
+      jogador.noChao = false;
+    }
+    // Pulo reativo
+    if (jogador.noChao && ((yDiff < -100 && Math.random() < 0.08) || Math.random() < 0.008)) {
+      jogador.velocidadeY = FORCA_PULO;
+      jogador.noChao = false;
+    }
+
+    // ── COMBATE ──
     if (
       !jogador.sprite.anims.isPlaying ||
       (jogador.sprite.anims.currentAnim?.key !== "player_punch" &&
         jogador.sprite.anims.currentAnim?.key !== "player_kick")
     ) {
       if (distanciaAbs < alcanceAtaque + 20) {
-        // Chance de soco (6% a cada frame de update)
-        if (Math.random() < 0.06 && jogador.vigor > 10) {
+        if (Math.random() < 0.03 && jogador.vigor > 10) {
           jogador.sprite.play("player_punch");
-          this._verificarAtaque(jogador, this.jogador1, 8);
+          // Ataque garantido: sem checagem de distância, o soco sempre acerta
+          this.jogador1.vida -= 5;
+          this.jogador1.vida = Math.max(0, this.jogador1.vida);
+          this._criarParticulasImpacto(this.jogador1.sprite.x, this.jogador1.sprite.y - 80);
+          this.jogador1.sprite.setTint(0xff0000);
+          this.time.delayedCall(100, () => {
+            const uniforme = UNIFORMES.find((u) => u.id === this.jogador1.idUniforme);
+            this.jogador1.sprite.setTint(uniforme ? uniforme.corPrimaria : 0xffffff);
+          });
           jogador.vigor -= 5;
-        }
-        // Chance de chute (2% se tiver vigor)
-        else if (Math.random() < 0.02 && jogador.vigor > 20) {
+        } else if (Math.random() < 0.015 && jogador.vigor > 20) {
           jogador.sprite.play("player_kick");
-          this._verificarAtaque(jogador, this.jogador1, 15);
+          // Ataque garantido para o chute também
+          this.jogador1.vida -= 10;
+          this.jogador1.vida = Math.max(0, this.jogador1.vida);
+          this._criarParticulasImpacto(this.jogador1.sprite.x, this.jogador1.sprite.y - 80);
+          this.jogador1.sprite.setTint(0xff0000);
+          this.time.delayedCall(100, () => {
+            const uniforme = UNIFORMES.find((u) => u.id === this.jogador1.idUniforme);
+            this.jogador1.sprite.setTint(uniforme ? uniforme.corPrimaria : 0xffffff);
+          });
           jogador.vigor -= 10;
         }
       }

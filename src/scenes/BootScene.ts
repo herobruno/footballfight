@@ -12,6 +12,8 @@ import bolaChutadaUrl from '../assets/fx/bola_poder_chutada.png';
 import placarUrl from '../assets/ui/placar.png';
 import inicialUrl from '../assets/ui/inicial.png';
 import estadioUrl from '../assets/ui/estadio.jpeg';
+import garraUrl from '../assets/ui/garra.png';
+import sangueUrl from '../assets/ui/sangue.png';
 import { UniformPipeline } from '../pipelines/UniformPipeline';
 
 export class CenaInicializacao extends Phaser.Scene {
@@ -59,6 +61,10 @@ export class CenaInicializacao extends Phaser.Scene {
     this.load.image('bola_chutada', bolaChutadaUrl);
     this.load.image('placar', placarUrl);
     this.load.image('inicial', inicialUrl);
+
+    // Logos dos Times
+    this.load.image('garra', garraUrl);
+    this.load.image('sangue', sangueUrl);
 
     // Fundo do Estádio
     this.load.image('estadio', fundoUrl);

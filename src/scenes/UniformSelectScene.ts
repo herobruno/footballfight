@@ -19,9 +19,14 @@ export class CenaSelecaoUniforme extends Phaser.Scene {
   private spriteOponente!: Phaser.GameObjects.Sprite;
   private cartoesUniforme: Phaser.GameObjects.Container[] = [];
   private cartoesCiclo: Phaser.GameObjects.Container[] = [];
+  private previewMapa!: Phaser.GameObjects.Container;
 
   constructor() {
     super({ key: 'CenaSelecaoUniforme' });
+  }
+
+  private _obterChaveLogo(uniforme: OpcaoUniforme): string {
+    return uniforme.id === 'azul' ? 'garra' : 'sangue';
   }
 
   private _aplicarPipelineUniforme(sprite: Phaser.GameObjects.Sprite, uniforme: OpcaoUniforme): void {
@@ -117,7 +122,7 @@ export class CenaSelecaoUniforme extends Phaser.Scene {
       fontFamily: "'Bangers', cursive", fontSize: '16px', color: '#0C439F', letterSpacing: 2,
     }).setOrigin(0.5);
 
-    // Sprites dos jogadores
+    // Sprites dos jogadores no preview central
     this.spritePreview = this.add.sprite(previewCX - 110, previewY - 20, 'p_parado').setScale(0.18).setDepth(10);
     this._aplicarPipelineUniforme(this.spritePreview, this.uniformeSelecionado);
     this.spritePreview.play('player_idle');
@@ -143,11 +148,14 @@ export class CenaSelecaoUniforme extends Phaser.Scene {
       this.cartoesCiclo.push(cartao);
     });
 
+    // ── Prévia do Mapa (clima) abaixo dos cards ──
+    const previewMapaX = zonaDir.x + zonaDir.larg / 2;
+    const previewMapaY = climaY + climaCardAlt + 150;
+    this.previewMapa = this.add.container(previewMapaX, previewMapaY);
+    this._desenharPreviewMapa(this.cicloSelecionado);
+
     // ── Rodapé: Botão Iniciar + Voltar ────────
     const rodapeY = ALTURA_JOGO - 55;
-
-    this.add.rectangle(LARGURA_JOGO / 2, ALTURA_JOGO - rodapeY / 2, LARGURA_JOGO, 4, 0xffffff)
-      .setOrigin(0.5, 0.5);
 
     this._criarBotaoIniciar(LARGURA_JOGO / 2, ALTURA_JOGO - 45);
 
@@ -196,9 +204,12 @@ export class CenaSelecaoUniforme extends Phaser.Scene {
     fundo.lineStyle(2, 0x374459, 1);
     fundo.strokeRect(0, 0, larg, alt);
 
-    const sprite = this.add.sprite(larg / 2, alt * 0.42, 'p_parado').setScale(0.12);
-    this._aplicarPipelineUniforme(sprite, uniforme);
-    sprite.play('player_idle');
+    // Logo do time no lugar do sprite do jogador
+    const logo = this.add.image(larg / 2, alt * 0.38, this._obterChaveLogo(uniforme)).setScale(0.12);
+    // Sangue Futebol logo olhando para a direita
+    if (uniforme.id === 'branco') {
+      logo.setFlipX(true);
+    }
 
     const nome = this.add.text(larg / 2, alt - 28, uniforme.rotuloPt.toUpperCase(), {
       fontFamily: "'Bangers', cursive",
@@ -209,9 +220,9 @@ export class CenaSelecaoUniforme extends Phaser.Scene {
       wordWrap: { width: larg - 16 },
     }).setOrigin(0.5);
 
-    container.add([fundo, sprite, nome]);
+    container.add([fundo, logo, nome]);
     container.setSize(larg, alt);
-    container.setInteractive({ useHandCursor: true });
+    container.setInteractive(new Phaser.Geom.Rectangle(0, 0, larg, alt), Phaser.Geom.Rectangle.Contains, true);
     container.setData('uniforme', uniforme);
 
     container.on('pointerup', () => {
@@ -252,13 +263,14 @@ export class CenaSelecaoUniforme extends Phaser.Scene {
 
     container.add([fundo, letra, nome]);
     container.setSize(larg, alt);
-    container.setInteractive({ useHandCursor: true });
+    container.setInteractive(new Phaser.Geom.Rectangle(0, 0, larg, alt), Phaser.Geom.Rectangle.Contains, true);
     container.setData('ciclo', ciclo);
 
     container.on('pointerup', () => {
       this.cicloSelecionado = ciclo;
       definirCicloHorario(ciclo);
       this._destacarSelecionados();
+      this._desenharPreviewMapa(ciclo);
     });
     container.on('pointerover', () => this.tweens.add({ targets: container, scaleY: 1.05, scaleX: 1.05, duration: 100 }));
     container.on('pointerout',  () => this.tweens.add({ targets: container, scaleY: 1, scaleX: 1, duration: 100 }));
@@ -270,6 +282,76 @@ export class CenaSelecaoUniforme extends Phaser.Scene {
     this._aplicarPipelineUniforme(this.spritePreview, this.uniformeSelecionado);
     const oponente = UNIFORMES.find(u => u.id !== this.uniformeSelecionado.id) || UNIFORMES[1];
     this._aplicarPipelineUniforme(this.spriteOponente, oponente);
+  }
+
+  private _desenharPreviewMapa(ciclo: PresetHorario): void {
+    this.previewMapa.removeAll(true);
+
+    const larg = 280;
+    const alt = 160;
+
+    // Imagem do estádio (imagem_fundo.png carregada como 'estadio')
+    const estadioImg = this.add.image(0, 0, 'estadio');
+    estadioImg.setDisplaySize(larg, alt);
+    this.previewMapa.add(estadioImg);
+
+    // Céu gradiente semi-transparente sobre a parte superior
+    const ceu = this.add.graphics();
+    ceu.fillGradientStyle(ciclo.ceuTopo, ciclo.ceuTopo, ciclo.ceuBase, ciclo.ceuBase, 0.55);
+    ceu.fillRect(-larg / 2, -alt / 2, larg, alt * 0.65);
+    this.previewMapa.add(ceu);
+
+    // Overlay de ambiente (como na arena real da GameScene)
+    const overlay = this.add.graphics();
+    overlay.fillStyle(ciclo.corAmbiente, ciclo.alfaAmbiente);
+    overlay.fillRect(-larg / 2, -alt / 2, larg, alt);
+    overlay.setBlendMode(Phaser.BlendModes.MULTIPLY);
+    this.previewMapa.add(overlay);
+
+    // Astros
+    if (ciclo.nome === 'noite') {
+      const estrelas = this.add.graphics();
+      for (let i = 0; i < 30; i++) {
+        const ex = -larg / 2 + Math.random() * larg;
+        const ey = -alt / 2 + Math.random() * (alt * 0.45);
+        estrelas.fillStyle(0xffffff, Math.random() * 0.7 + 0.3);
+        estrelas.fillCircle(ex, ey, Math.random() * 1.5 + 0.5);
+      }
+      // Lua
+      estrelas.fillStyle(0xeeeedd, 0.9);
+      estrelas.fillCircle(larg / 2 - 35, -alt / 2 + 25, 14);
+      estrelas.fillStyle(0x000000, 0.25);
+      estrelas.fillCircle(larg / 2 - 29, -alt / 2 + 19, 11);
+      this.previewMapa.add(estrelas);
+    }
+
+    if (ciclo.nome === 'manha' || ciclo.nome === 'golden') {
+      const sol = this.add.graphics();
+      const solX = ciclo.nome === 'manha' ? -larg / 2 + 40 : larg / 2 - 40;
+      const solY = -alt / 2 + 25;
+      sol.fillStyle(0xffee58, 0.2);
+      sol.fillCircle(solX, solY, 30);
+      sol.fillStyle(0xffee58, 0.4);
+      sol.fillCircle(solX, solY, 20);
+      sol.fillStyle(0xffee58, 0.9);
+      sol.fillCircle(solX, solY, 10);
+      this.previewMapa.add(sol);
+    }
+
+    // Borda do preview
+    const borda = this.add.graphics();
+    borda.lineStyle(2, 0x004DD6, 1);
+    borda.strokeRect(-larg / 2, -alt / 2, larg, alt);
+    this.previewMapa.add(borda);
+
+    // Label com nome do clima
+    const label = this.add.text(0, alt / 2 - 14, ciclo.rotuloPt.toUpperCase(), {
+      fontFamily: "'Bangers', cursive",
+      fontSize: '14px',
+      color: '#F1F1F1',
+      letterSpacing: 2,
+    }).setOrigin(0.5);
+    this.previewMapa.add(label);
   }
 
   private _destacarSelecionados(): void {

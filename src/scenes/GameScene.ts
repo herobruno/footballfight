@@ -189,20 +189,31 @@ export class CenaJogo extends Phaser.Scene {
     // ── Desenhar a Arena ─────────────────────
     this._desenharArena();
 
+    // ── Posicionar pelo uniforme ─────────────────
+    // Garra (azul) fica no lado ESQUERDO,
+    // Sangue Futebol (branco) fica no lado DIREITO.
+    const jogador1LadoEsquerdo = estado.uniformeJogador1.id === "azul";
+    const posJ1 = jogador1LadoEsquerdo ? 300 : LARGURA_JOGO - 300;
+    const posJ2 = jogador1LadoEsquerdo ? LARGURA_JOGO - 300 : 300;
+
     // ── Criar Jogadores ──────────────────────
     this.jogador1 = this._criarJogador(
-      300,
+      posJ1,
       CHAO_Y,
       estado.uniformeJogador1.id,
-      true,
+      jogador1LadoEsquerdo,
     );
     this.jogador2 = this._criarJogador(
-      LARGURA_JOGO - 300,
+      posJ2,
       CHAO_Y,
       estado.uniformeJogador2.id,
-      false,
+      !jogador1LadoEsquerdo,
     );
-    this.jogador2.sprite.setFlipX(true);
+    // Inverter flip inicial do J1 se estiver no lado direito (olhando para esquerda)
+    if (!jogador1LadoEsquerdo) {
+      this.jogador1.sprite.setFlipX(true);
+    }
+    this.jogador2.sprite.setFlipX(!jogador1LadoEsquerdo);
 
     // ── HUD ──────────────────────────────────
     this._criarHUD();
@@ -587,6 +598,12 @@ export class CenaJogo extends Phaser.Scene {
   private _finalizarJogo(mensagem: string): void {
     this.fimDeJogo = true;
 
+    // ═══ DETECTAR VENCEDOR E PEGAR A COR DO UNIFORME DELE ═══
+    const vencedorEhJ1 = this.jogador1.vida > 0;
+    const estado = obterEstado();
+    const uniformeVencedor = vencedorEhJ1 ? estado.uniformeJogador1 : estado.uniformeJogador2;
+    const corVencedorHex = `#${uniformeVencedor.corPrimaria.toString(16).padStart(6, '0')}`;
+
     // Parar spawn de bolas de poder
     if (this.eventoSpawnBolas) {
       this.eventoSpawnBolas.destroy();
@@ -621,6 +638,14 @@ export class CenaJogo extends Phaser.Scene {
       this.domHud.scoreboard.style.top = "30%"; // Subimos um pouco de 50% para dar espaço para as estatísticas
       this.domHud.scoreboard.style.transform =
         "translateX(-50%) translateY(-100%) scale(2)";
+
+      // Aplicar cor do vencedor no placar
+      const timeVencedorCSS = vencedorEhJ1 ? '.team-p1' : '.team-p2';
+      const timeVencedor = document.querySelector(timeVencedorCSS) as HTMLElement;
+      if (timeVencedor) {
+        timeVencedor.style.background = `linear-gradient(90deg, ${corVencedorHex}, #0C2857)`;
+        timeVencedor.style.borderLeft = `2px solid ${corVencedorHex}`;
+      }
     }
 
     // ── CALCULAR ALGORITMO DE RANKING DE ESTILO ──
@@ -641,13 +666,13 @@ export class CenaJogo extends Phaser.Scene {
       }
     }
 
-    // Título do resultado (Mensagem)
+    // Título do resultado (Mensagem) — cor igual ao uniforme do vencedor
     const texto = this.add
       .text(LARGURA_JOGO / 2, ALTURA_JOGO / 2 - 20, mensagem, {
         fontFamily: "Orbitron, monospace",
         fontSize: "32px",
         fontStyle: "bold",
-        color: "#ffffff",
+        color: corVencedorHex,
         stroke: "#000000",
         strokeThickness: 6,
       })
@@ -1318,6 +1343,9 @@ export class CenaJogo extends Phaser.Scene {
   // ═══════════════════════════════════════════
   private _criarHUD(): void {
     const profundidade = 25;
+    const estado = obterEstado();
+    const uniformeJ1 = estado.uniformeJogador1;
+    const uniformeJ2 = estado.uniformeJogador2;
 
     this.events.once("shutdown", () => {
       const containers = document.querySelectorAll(".hud-container");
@@ -1345,6 +1373,88 @@ export class CenaJogo extends Phaser.Scene {
       this.domHud.scoreboard.style.transition = "none";
       this.domHud.scoreboard.style.top = "20px";
       this.domHud.scoreboard.style.transform = "translateX(-50%) scale(1)";
+    }
+
+    // ═══ INVERTER HUD SE JOGADOR ESTIVER NO LADO DIREITO ═══
+    // Garra (azul) = lado esquerdo = HUD normal
+    // Sangue Futebol (branco) = lado direito = HUD invertido
+    const jogador1LadoEsquerdo = uniformeJ1.id === "azul";
+
+    const hudP1El = document.getElementById('hud-p1') as HTMLElement;
+    const hudP2El = document.getElementById('hud-p2') as HTMLElement;
+
+    if (!jogador1LadoEsquerdo) {
+      // Inverter as posições dos HUDs na tela
+      if (hudP1El) hudP1El.style.right = "40px";
+      if (hudP1El) hudP1El.style.left = "auto";
+      if (hudP2El) hudP2El.style.left = "40px";
+      if (hudP2El) hudP2El.style.right = "auto";
+    } else {
+      // Garantir posições padrão
+      if (hudP1El) hudP1El.style.left = "40px";
+      if (hudP1El) hudP1El.style.right = "auto";
+      if (hudP2El) hudP2El.style.right = "40px";
+      if (hudP2El) hudP2El.style.left = "auto";
+    }
+
+    // ═══ APLICAR CORES E NOMES DO UNIFORME NO HUD E PLACAR ═══
+    const corJ1 = `#${uniformeJ1.corPrimaria.toString(16).padStart(6, '0')}`;
+    const corJ2 = `#${uniformeJ2.corPrimaria.toString(16).padStart(6, '0')}`;
+
+    const nomeTime1 = uniformeJ1.rotuloPt.toUpperCase();
+    const nomeTime2 = uniformeJ2.rotuloPt.toUpperCase();
+
+    // Atualizar cor do nome do jogador 1 (HUD) — mantém o texto "JOGADOR 1"
+    const nomeJ1 = document.querySelector('#hud-p1 .player-name') as HTMLElement;
+    if (nomeJ1) {
+      nomeJ1.style.color = corJ1;
+    }
+
+    // Aplicar cor na borda da barra de vida do J1
+    if (hudP1El) {
+      const healthBar = hudP1El.querySelector('.health-bar') as HTMLElement;
+      if (healthBar) {
+        healthBar.style.borderColor = corJ1;
+        healthBar.style.boxShadow = `0 0 8px ${corJ1}`;
+      }
+    }
+
+    // Atualizar cor do nome do jogador 2 (HUD) — mantém o texto "CPU / P2"
+    const nomeJ2 = document.querySelector('#hud-p2 .player-name') as HTMLElement;
+    if (nomeJ2) {
+      nomeJ2.style.color = corJ2;
+    }
+
+    // Aplicar cor na borda da barra de vida do J2
+    if (hudP2El) {
+      const healthBar = hudP2El.querySelector('.health-bar') as HTMLElement;
+      if (healthBar) {
+        healthBar.style.borderColor = corJ2;
+        healthBar.style.boxShadow = `0 0 8px ${corJ2}`;
+      }
+    }
+
+    // Aplicar cores e inverter textos no placar conforme lado do Jogador 1
+    const teamP1 = document.querySelector('.team-p1') as HTMLElement;
+    const teamP2 = document.querySelector('.team-p2') as HTMLElement;
+    if (teamP1 && teamP2) {
+      if (jogador1LadoEsquerdo) {
+        // J1 na esquerda = normal
+        teamP1.style.background = `linear-gradient(90deg, ${corJ1}, #0C2857)`;
+        teamP1.style.borderLeft = `2px solid ${corJ1}`;
+        teamP1.innerText = "JOGADOR 1";
+        teamP2.style.background = `linear-gradient(270deg, ${corJ2}, #0C2857)`;
+        teamP2.style.borderRight = `2px solid ${corJ2}`;
+        teamP2.innerText = "CPU / P2";
+      } else {
+        // J1 na direita = inverter textos e cores no placar
+        teamP1.style.background = `linear-gradient(90deg, ${corJ2}, #0C2857)`;
+        teamP1.style.borderLeft = `2px solid ${corJ2}`;
+        teamP1.innerText = "CPU / P2";
+        teamP2.style.background = `linear-gradient(270deg, ${corJ1}, #0C2857)`;
+        teamP2.style.borderRight = `2px solid ${corJ1}`;
+        teamP2.innerText = "JOGADOR 1";
+      }
     }
 
     this.iconeExaustoJ1 = this.add

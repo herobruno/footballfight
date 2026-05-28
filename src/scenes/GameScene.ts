@@ -12,6 +12,14 @@ import {
   REGEN_VIGOR_PARADO,
   REGEN_VIGOR_ANDANDO,
   LIMIAR_EXAUSTO,
+  ALCANCE_ATAQUE,
+  REPULSAO_BASE,
+  REPULSAO_ACUMULO,
+  REPULSAO_MAXIMA,
+  REPULSAO_ATRITO,
+  REPULSAO_VERTICAL_BASE,
+  REPULSAO_VERTICAL_ACUMULO,
+  REPULSAO_VERTICAL_MAXIMO,
   UNIFORMES,
   type PresetHorario,
   type OpcaoUniforme,
@@ -34,6 +42,9 @@ interface DadosJogador {
   quadroAnim: number;
   timerAnim: number;
   estaChutando: boolean;
+  // Repulsão (knockback)
+  repulsao: number;              // Quantos golpes acumulados (aumenta progressivamente)
+  velocidadeRepulsaoX: number;   // Velocidade horizontal imposta pela repulsão
   // Timer para evitar tremor da IA
   timerDecisaoIA: number;
   decisaoIA: "atacar" | "fugir" | "bola" | "recuar" | "parado" | "nenhuma";
@@ -96,6 +107,7 @@ export class CenaJogo extends Phaser.Scene {
 
   private iconeExaustoJ1!: Phaser.GameObjects.Text;
   private iconeExaustoJ2!: Phaser.GameObjects.Text;
+  private indicadorJogador1!: Phaser.GameObjects.Text;
 
   // Arena
   private cicloHorario!: PresetHorario;
@@ -577,6 +589,12 @@ export class CenaJogo extends Phaser.Scene {
     this.jogador2.vida = 100;
     this.jogador2.vigor = 100;
 
+    // Resetar repulsão
+    this.jogador1.repulsao = 0;
+    this.jogador1.velocidadeRepulsaoX = 0;
+    this.jogador2.repulsao = 0;
+    this.jogador2.velocidadeRepulsaoX = 0;
+
     // Reposicionar
     this.jogador1.sprite.setPosition(LARGURA_JOGO * 0.25, CHAO_Y);
     this.jogador2.sprite.setPosition(LARGURA_JOGO * 0.75, CHAO_Y);
@@ -631,21 +649,13 @@ export class CenaJogo extends Phaser.Scene {
       duration: 500,
     });
 
-    // Mostrar Placar Final CSS
+    // Mostrar Placar Final CSS (mantém as cores originais dos times)
     if (this.domHud.scoreboard) {
       this.domHud.scoreboard.style.transition =
         "all 0.8s cubic-bezier(0.175, 0.885, 0.32, 1.275)";
-      this.domHud.scoreboard.style.top = "30%"; // Subimos um pouco de 50% para dar espaço para as estatísticas
+      this.domHud.scoreboard.style.top = "30%";
       this.domHud.scoreboard.style.transform =
         "translateX(-50%) translateY(-100%) scale(2)";
-
-      // Aplicar cor do vencedor no placar
-      const timeVencedorCSS = vencedorEhJ1 ? '.team-p1' : '.team-p2';
-      const timeVencedor = document.querySelector(timeVencedorCSS) as HTMLElement;
-      if (timeVencedor) {
-        timeVencedor.style.background = `linear-gradient(90deg, ${corVencedorHex}, #0C2857)`;
-        timeVencedor.style.borderLeft = `2px solid ${corVencedorHex}`;
-      }
     }
 
     // ── CALCULAR ALGORITMO DE RANKING DE ESTILO ──
@@ -890,6 +900,8 @@ export class CenaJogo extends Phaser.Scene {
       quadroAnim: 0,
       timerAnim: 0,
       estaChutando: false,
+      repulsao: 0,
+      velocidadeRepulsaoX: 0,
       timerDecisaoIA: 0,
       decisaoIA: "nenhuma" as const,
     };
@@ -986,7 +998,7 @@ export class CenaJogo extends Phaser.Scene {
     const distancia = alvo.x - jogador.sprite.x;
     const distanciaAbs = Math.abs(distancia);
     const yDiff = alvo.y - jogador.sprite.y;
-    const alcanceAtaque = 100;
+    const alcanceAtaque = ALCANCE_ATAQUE;
     const vidaBaixa = jogador.vida < 30;
 
     // ── Verificar bola de poder no chão ──
@@ -1110,12 +1122,14 @@ export class CenaJogo extends Phaser.Scene {
     }
 
     // ── COMBATE ──
+    // Só acerta se estiver olhando na direção do alvo
+    const direcaoOk = jogador.olhandoDireita ? distancia > 0 : distancia < 0;
     if (
       !jogador.sprite.anims.isPlaying ||
       (jogador.sprite.anims.currentAnim?.key !== "player_punch" &&
         jogador.sprite.anims.currentAnim?.key !== "player_kick")
     ) {
-      if (distanciaAbs < alcanceAtaque + 20) {
+      if (distanciaAbs < alcanceAtaque + 20 && direcaoOk) {
         if (Math.random() < 0.03 && jogador.vigor > 10) {
           jogador.sprite.play("player_punch");
           this.jogador1.vida -= 5;
@@ -1126,6 +1140,8 @@ export class CenaJogo extends Phaser.Scene {
             this.jogador1.sprite.clearTint();
           });
           jogador.vigor -= 5;
+          // ── Repulsão da IA no Jogador 1 ──
+          this._aplicarRepulsao(jogador, this.jogador1);
         } else if (Math.random() < 0.015 && jogador.vigor > 20) {
           jogador.sprite.play("player_kick");
           this.jogador1.vida -= 10;
@@ -1136,6 +1152,8 @@ export class CenaJogo extends Phaser.Scene {
             this.jogador1.sprite.clearTint();
           });
           jogador.vigor -= 10;
+          // ── Repulsão da IA no Jogador 1 ──
+          this._aplicarRepulsao(jogador, this.jogador1);
         }
       }
     }
@@ -1145,6 +1163,17 @@ export class CenaJogo extends Phaser.Scene {
   //  FÍSICA
   // ═══════════════════════════════════════════
   private _aplicarFisica(jogador: DadosJogador, dt: number): void {
+    // ── Repulsão: atenua progressivamente ──────────────────
+    if (Math.abs(jogador.velocidadeRepulsaoX) > 1) {
+      // Aplica a velocidade de repulsão
+      jogador.sprite.x += jogador.velocidadeRepulsaoX * dt;
+      // Atenua com atrito
+      jogador.velocidadeRepulsaoX *= REPULSAO_ATRITO;
+    } else {
+      jogador.velocidadeRepulsaoX = 0;
+    }
+
+    // Movimento normal do jogador
     jogador.sprite.x += jogador.velocidadeX * dt;
 
     if (!jogador.noChao) {
@@ -1181,8 +1210,37 @@ export class CenaJogo extends Phaser.Scene {
   }
 
   // ═══════════════════════════════════════════
-  //  LOGICA DE COMBATE
+  //  LÓGICA DE REPULSÃO E COMBATE
   // ═══════════════════════════════════════════
+
+  /**
+   * Aplica repulsão no defensor com força progressiva baseada
+   * no número de golpes que ele já levou.
+   */
+  private _aplicarRepulsao(
+    atacante: DadosJogador,
+    defensor: DadosJogador,
+  ): void {
+    // Incrementa o contador de repulsão (quanto mais leva, mais longe voa)
+    defensor.repulsao++;
+    // Calcula força com base no acumulador, limitada ao máximo
+    const forca = Math.min(
+      REPULSAO_BASE + defensor.repulsao * REPULSAO_ACUMULO,
+      REPULSAO_MAXIMA,
+    );
+    // Direção: para longe do atacante
+    const direcao = atacante.olhandoDireita ? 1 : -1;
+    defensor.velocidadeRepulsaoX = forca * direcao;
+
+    // Repulsão vertical progressiva (quanto mais golpe, mais alto voa)
+    const forcaVertical = Math.min(
+      REPULSAO_VERTICAL_BASE + defensor.repulsao * REPULSAO_VERTICAL_ACUMULO,
+      REPULSAO_VERTICAL_MAXIMO,
+    );
+    defensor.velocidadeY = forcaVertical;
+    defensor.noChao = false;
+  }
+
   private _verificarAtaque(
     atacante: DadosJogador,
     defensor: DadosJogador,
@@ -1196,7 +1254,7 @@ export class CenaJogo extends Phaser.Scene {
         ? defensor.sprite.x > atacante.sprite.x
         : defensor.sprite.x < atacante.sprite.x;
 
-      if (dist < 130 && alturaOk && direcaoOk) {
+      if (dist < ALCANCE_ATAQUE + 30 && alturaOk && direcaoOk) {
         defensor.vida -= dano;
         defensor.vida = Math.max(0, defensor.vida);
 
@@ -1204,6 +1262,9 @@ export class CenaJogo extends Phaser.Scene {
           this.estatisticas.socosConectados++;
           this.estatisticas.pontosGladiador += 10;
         }
+
+        // ── Repulsão progressiva ──
+        this._aplicarRepulsao(atacante, defensor);
 
         defensor.sprite.setTint(0xff0000);
         this.time.delayedCall(100, () => {
@@ -1375,26 +1436,39 @@ export class CenaJogo extends Phaser.Scene {
       this.domHud.scoreboard.style.transform = "translateX(-50%) scale(1)";
     }
 
+    const hudP1El = document.getElementById('hud-p1') as HTMLElement;
+    const hudP2El = document.getElementById('hud-p2') as HTMLElement;
+
     // ═══ INVERTER HUD SE JOGADOR ESTIVER NO LADO DIREITO ═══
     // Garra (azul) = lado esquerdo = HUD normal
     // Sangue Futebol (branco) = lado direito = HUD invertido
     const jogador1LadoEsquerdo = uniformeJ1.id === "azul";
 
-    const hudP1El = document.getElementById('hud-p1') as HTMLElement;
-    const hudP2El = document.getElementById('hud-p2') as HTMLElement;
-
     if (!jogador1LadoEsquerdo) {
-      // Inverter as posições dos HUDs na tela
+      // Jogador 1 na DIREITA -> seu HUD vai pra direita
       if (hudP1El) hudP1El.style.right = "40px";
       if (hudP1El) hudP1El.style.left = "auto";
+      if (hudP1El) hudP1El.style.textAlign = "right";
+      // hud-p1 agora usa row-reverse (já que está na direita)
+      if (hudP1El) hudP1El.querySelector('.bar-wrapper')?.setAttribute('style', 'flex-direction: row-reverse; display: flex; align-items: center; gap: 12px;');
+
+      // CPU vai pra ESQUERDA
       if (hudP2El) hudP2El.style.left = "40px";
       if (hudP2El) hudP2El.style.right = "auto";
+      if (hudP2El) hudP2El.style.textAlign = "left";
+      // hud-p2 agora usa row normal (já que está na esquerda)
+      if (hudP2El) hudP2El.querySelector('.bar-wrapper')?.setAttribute('style', 'display: flex; align-items: center; gap: 12px;');
     } else {
-      // Garantir posições padrão
+      // Posições padrão (J1 esquerda, J2 direita)
       if (hudP1El) hudP1El.style.left = "40px";
       if (hudP1El) hudP1El.style.right = "auto";
+      if (hudP1El) hudP1El.style.textAlign = "left";
+      if (hudP1El) hudP1El.querySelector('.bar-wrapper')?.setAttribute('style', 'display: flex; align-items: center; gap: 12px;');
+
       if (hudP2El) hudP2El.style.right = "40px";
       if (hudP2El) hudP2El.style.left = "auto";
+      if (hudP2El) hudP2El.style.textAlign = "right";
+      if (hudP2El) hudP2El.querySelector('.bar-wrapper')?.setAttribute('style', 'flex-direction: row-reverse; display: flex; align-items: center; gap: 12px;');
     }
 
     // ═══ APLICAR CORES E NOMES DO UNIFORME NO HUD E PLACAR ═══
@@ -1456,6 +1530,21 @@ export class CenaJogo extends Phaser.Scene {
         teamP2.innerText = "JOGADOR 1";
       }
     }
+
+    // ── Indicador de seta com a cor do time acima do Jogador 1 ──
+    this.indicadorJogador1 = this.add
+      .text(0, 0, "▼", {
+        fontFamily: "Orbitron, monospace",
+        fontSize: "24px",
+        fontStyle: "bold",
+        color: corJ1,
+        stroke: "#000000",
+        strokeThickness: 5,
+        align: "center",
+      })
+      .setOrigin(0.5, 1)
+      .setDepth(profundidade)
+      .setVisible(true);
 
     this.iconeExaustoJ1 = this.add
       .text(0, 0, "😤", {
@@ -1525,11 +1614,26 @@ export class CenaJogo extends Phaser.Scene {
       label: HTMLElement | null,
       current: number,
       max: number,
+      isHealth: boolean,
     ) => {
       if (bar && label) {
         const percent = Math.floor((current / max) * 100);
         bar.style.width = `${percent}%`;
         label.innerText = `${percent}%`;
+
+        // Mudar cor da barra de vida conforme o HP
+        if (isHealth) {
+          if (percent > 60) {
+            bar.style.background = 'linear-gradient(90deg, #2ecc71, #27ae60)';
+            bar.style.boxShadow = '0 0 15px rgba(46, 204, 113, 0.6)';
+          } else if (percent > 30) {
+            bar.style.background = 'linear-gradient(90deg, #f1c40f, #f39c12)';
+            bar.style.boxShadow = '0 0 15px rgba(241, 196, 15, 0.6)';
+          } else {
+            bar.style.background = 'linear-gradient(90deg, #e74c3c, #c0392b)';
+            bar.style.boxShadow = '0 0 15px rgba(231, 76, 60, 0.6)';
+          }
+        }
       }
     };
 
@@ -1538,12 +1642,14 @@ export class CenaJogo extends Phaser.Scene {
       this.domHud.h1Label,
       this.jogador1.vida,
       VIDA_MAXIMA,
+      true,
     );
     updateBar(
       this.domHud.s1,
       this.domHud.s1Label,
       this.jogador1.vigor,
       VIGOR_MAXIMO,
+      false,
     );
 
     updateBar(
@@ -1551,12 +1657,20 @@ export class CenaJogo extends Phaser.Scene {
       this.domHud.h2Label,
       this.jogador2.vida,
       VIDA_MAXIMA,
+      true,
     );
     updateBar(
       this.domHud.s2,
       this.domHud.s2Label,
       this.jogador2.vigor,
       VIGOR_MAXIMO,
+      false,
+    );
+
+    // ── Indicador "VOCÊ" acima do Jogador 1 ──
+    this.indicadorJogador1.setPosition(
+      this.jogador1.sprite.x,
+      this.jogador1.sprite.y - 190,
     );
 
     this.iconeExaustoJ1.setVisible(this.jogador1.estaExausto);

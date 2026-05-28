@@ -12,6 +12,18 @@ export const FORCA_PULO = -520;
 export const TAMANHO_JOGADOR = { largura: 56, altura: 61 };
 export const CHAO_Y = 710;
 
+// ─── Alcance do Ataque ──────────────────────
+export const ALCANCE_ATAQUE = 100;       // Distância máxima para soco/chute conectar (jogador e IA)
+
+// ─── Repulsão (Knockback) ────────────────────
+export const REPULSAO_BASE = 200;       // Força inicial de repulsão (px/s)
+export const REPULSAO_ACUMULO = 60;     // Força adicional POR GOLPE acumulado
+export const REPULSAO_MAXIMA = 1000;    // Limite máximo de repulsão
+export const REPULSAO_ATRITO = 0.85;    // Fator de atenuação por frame
+export const REPULSAO_VERTICAL_BASE = -150;  // Impulso vertical inicial
+export const REPULSAO_VERTICAL_ACUMULO = -30; // Impulso vertical adicional por golpe
+export const REPULSAO_VERTICAL_MAXIMO = -350; // Limite máximo de impulso vertical
+
 // ─── Vigor / Estamina ────────────────────────
 export const VIGOR_MAXIMO = 100;
 export const VIDA_MAXIMA = 100;

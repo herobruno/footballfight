@@ -141,6 +141,48 @@ export class CenaJogo extends Phaser.Scene {
   }
 
   create(): void {
+    // ═══ RESETAR ESTADO DA CENA PARA REINÍCIO LIMPO ═══
+    // O slow motion (timeScale = 0.1) pode ter ficado preso
+    // se a partida terminou antes do delayedCall restaurá-lo.
+    this.time.timeScale = 1;
+    this.physics.world.timeScale = 1;
+
+    // Resetar câmera para evitar scroll/zoom residual
+    this.cameras.main.scrollX = 0;
+    this.cameras.main.scrollY = 0;
+    this.cameras.main.zoom = 1;
+    this.cameras.main.resetFX();
+
+    // Limpar arrays de projéteis e bolas de poder
+    this.projeteis = [];
+    this.bolasDePoder = [];
+
+    // Resetar flags de super chute
+    this.superChuteEmAndamento = false;
+    this.emitirRastroJ1 = false;
+
+    // Resetar estado de jogo (propriedades que são inicializadas uma vez no construtor)
+    this.fimDeJogo = false;
+    this.vitoriasJ1 = 0;
+    this.vitoriasJ2 = 0;
+    this.numeroRound = 1;
+    this.tempoRestante = 120;
+    this.eventoCronometro = undefined;
+    this.eventoSpawnBolas = undefined;
+    this.estaBrilhandoJ1 = false;
+    this.estaBrilhandoJ2 = false;
+    this.emissorBrilhoJ1 = undefined;
+    this.emissorBrilhoJ2 = undefined;
+    this.estatisticas = {
+        roundsVencidos: 0,
+        roundsPerdidos: 0,
+        socosConectados: 0,
+        superChutesDisparados: 0,
+        tempoComPoder: 0,
+        pontosGladiador: 0,
+        pontosTatico: 0,
+    };
+
     const estado = obterEstado();
     this.cicloHorario = estado.cicloHorario;
 
@@ -661,16 +703,19 @@ export class CenaJogo extends Phaser.Scene {
     });
 
     // Listener para o ESPAÇO (Reiniciar partida limpando o estado)
-    this.input
-      .keyboard!.addKey(Phaser.Input.Keyboard.KeyCodes.SPACE)
-      .once("down", () => {
-        // Se tiver elementos HTML do placar travados na tela, a gente reseta o CSS deles antes de sair
-        if (this.domHud.scoreboard) {
-          this.domHud.scoreboard.style.top = "";
-          this.domHud.scoreboard.style.transform = "";
-        }
-        this.scene.start("CenaMenu");
-      });
+    // Só aceita ESPAÇO após 5 segundos para evitar reinício acidental com cliques rápidos
+    this.time.delayedCall(5000, () => {
+      this.input
+        .keyboard!.addKey(Phaser.Input.Keyboard.KeyCodes.SPACE)
+        .once("down", () => {
+          // Se tiver elementos HTML do placar travados na tela, a gente reseta o CSS deles antes de sair
+          if (this.domHud.scoreboard) {
+            this.domHud.scoreboard.style.top = "";
+            this.domHud.scoreboard.style.transform = "";
+          }
+          this.scene.start("CenaMenu");
+        });
+    });
   }
 
   private _atualizarProjeteis(dt: number): void {

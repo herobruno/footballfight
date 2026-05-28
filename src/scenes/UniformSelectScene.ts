@@ -39,6 +39,12 @@ export class CenaSelecaoUniforme extends Phaser.Scene {
   }
 
   create(): void {
+    // ═══ LIMPAR CARTÕES DE RODADAS ANTERIORES ═══
+    // Quando a cena é reiniciada, os arrays mantêm referências
+    // de objetos já destruídos pelo shutdown do Phaser.
+    this.cartoesUniforme = [];
+    this.cartoesCiclo = [];
+
     const estado = obterEstado();
     this.uniformeSelecionado = estado.uniformeJogador1;
     this.cicloSelecionado = estado.cicloHorario;

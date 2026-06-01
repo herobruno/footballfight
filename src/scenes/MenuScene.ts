@@ -21,23 +21,33 @@ export class CenaMenu extends Phaser.Scene {
 
     // ── Botão Iniciar (Estilo PS1 - Bloco) ────────────────────────
     this._criarBotao(LARGURA_JOGO / 2, 460, 'INICIAR JOGO', 0x27ae60, () => {
+      
+      // ─── INSTANCIAR E TOCAR MÚSICA GLOBAL───
+      // 
+      if (!(window as any).musicaGlobal) {
+        // Link de um beat instrumental
+        (window as any).musicaGlobal = new Audio('https://www.soundhelix.com/examples/mp3/SoundHelix-Song-1.mp3');
+        (window as any).musicaGlobal.loop = true;
+        (window as any).musicaGlobal.volume = 0.3; // Volume 
+        (window as any).musicaGlobal.play().catch((err: any) => {
+          console.log("Aguardando interação do usuário para iniciar o som.", err);
+        });
+      } else {
+        // Se já existir, garante que continua tocando
+        if ((window as any).musicaGlobal.paused) {
+          (window as any).musicaGlobal.play();
+        }
+      }
+
+      // Transição nativa do jogo
       this.cameras.main.fade(400, 0, 0, 0, false, (_cam: Phaser.Cameras.Scene2D.Camera, progresso: number) => {
         if (progresso >= 1) {
           this.scene.start('CenaSelecaoUniforme');
         }
       });
     });
-
-    // ── Créditos ───────────────────────
-    this.add.text(LARGURA_JOGO / 2, ALTURA_JOGO - 40, '© 1998 DEEPMIND GAMES - LICENSED BY PS1', {
-      fontFamily: "'Bangers', cursive",
-      fontSize: '16px',
-      color: '#004DD6',
-      letterSpacing: 2,
-    }).setOrigin(0.5);
-
-    this.cameras.main.fadeIn(500, 0, 0, 0);
   }
+  
 
   private _desenharFundo(gfx: Phaser.GameObjects.Graphics): void {
     gfx.clear();

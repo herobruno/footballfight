@@ -622,135 +622,60 @@ export class CenaJogo extends Phaser.Scene {
     const uniformeVencedor = vencedorEhJ1 ? estado.uniformeJogador1 : estado.uniformeJogador2;
     const corVencedorHex = `#${uniformeVencedor.corPrimaria.toString(16).padStart(6, '0')}`;
 
-    // Parar spawn de bolas de poder
+    // Parar loops e timers de jogo
     if (this.eventoSpawnBolas) {
       this.eventoSpawnBolas.destroy();
       this.eventoSpawnBolas = undefined;
     }
-
-    // Parar movimentos
     this.jogador1.velocidadeX = 0;
     this.jogador2.velocidadeX = 0;
 
-    // Esconder HUD de HP/Stamina
-    const containers = document.querySelectorAll(".hud-container");
-    containers.forEach((c) => ((c as HTMLElement).style.display = "none"));
+    // ─── ALGORITMO DE CLASSIFICAÇÃO DE RANKING DE ESTILO ───
+    let rankingFinal = "ARTILHEIRO"; // Padrão caso o jogador jogue focado no gol
 
-    // Fundo semi-transparente para melhor legibilidade dos textos
-    const bgFiltro = this.add
-      .rectangle(LARGURA_JOGO / 2, ALTURA_JOGO / 2, LARGURA_JOGO, ALTURA_JOGO, 0x000000, 0.55)
-      .setDepth(90)
-      .setScrollFactor(0)
-      .setAlpha(0);
-
-    this.tweens.add({
-      targets: bgFiltro,
-      alpha: 1,
-      duration: 500,
-    });
-
-    // Mostrar Placar Final CSS (mantém as cores originais dos times)
-    if (this.domHud.scoreboard) {
-      this.domHud.scoreboard.style.transition =
-        "all 0.8s cubic-bezier(0.175, 0.885, 0.32, 1.275)";
-      this.domHud.scoreboard.style.top = "30%";
-      this.domHud.scoreboard.style.transform =
-        "translateX(-50%) translateY(-100%) scale(2)";
-    }
-
-    // ── CALCULAR ALGORITMO DE RANKING DE ESTILO ──
-    const totalPontos =
-      this.estatisticas.pontosGladiador + this.estatisticas.pontosTatico;
-    let estiloFinal = "EQUILIBRADO";
-    let corRanking = "#ffffff";
-
-    if (totalPontos > 0) {
-      const percentualGladiador =
-        this.estatisticas.pontosGladiador / totalPontos;
-      if (percentualGladiador > 0.65) {
-        estiloFinal = "GLADIADOR";
-        corRanking = "#ff3333"; // Vermelho agressivo
-      } else if (percentualGladiador < 0.35) {
-        estiloFinal = "TÁTICO";
-        corRanking = "#00ffff"; // Ciano calculista
+    const totalCombate = this.estatisticas.pontosGladiador + this.estatisticas.pontosTatico;
+    
+    if (totalCombate > 0) {
+      const percentualGladiador = this.estatisticas.pontosGladiador / totalCombate;
+      
+      if (percentualGladiador > 0.60) {
+        rankingFinal = "GLADIADOR";
+      } else if (percentualGladiador < 0.40) {
+        rankingFinal = "TÁTICO";
+      } else {
+        rankingFinal = "EQUILIBRADO";
       }
     }
 
-    // Título do resultado (Mensagem) — cor igual ao uniforme do vencedor
-    const texto = this.add
-      .text(LARGURA_JOGO / 2, ALTURA_JOGO / 2 - 20, mensagem, {
-        fontFamily: "Orbitron, monospace",
-        fontSize: "32px",
-        fontStyle: "bold",
-        color: corVencedorHex,
-        stroke: "#000000",
-        strokeThickness: 6,
-      })
-      .setOrigin(0.5)
-      .setDepth(101)
-      .setAlpha(0)
-      .setScrollFactor(0);
+    if (this.estatisticas.roundsVencidos >= 2 && this.estatisticas.roundsPerdidos === 0 && totalCombate === 0) {
+      rankingFinal = "ARTILHEIRO ELITE";
+    }
 
-    // ── BLOCO DE EXIBIÇÃO DAS ESTATÍSTICAS NA TELA ──
-    const textoEstatisticas = `
-      ESTILO DE COMBATE: ${estiloFinal}
-      SOCOS CONECTADOS: ${this.estatisticas.socosConectados}
-      SUPER CHUTES: ${this.estatisticas.superChutesDisparados}
-      TEMPO COM PODER: ${Math.round(this.estatisticas.tempoComPoder)}s
-    `.trim();
+    // Esconder a HUD de HP/Stamina HTML para limpar a tela
+    const containers = document.querySelectorAll(".hud-container");
+    containers.forEach((c) => ((c as HTMLElement).style.display = "none"));
 
-    const painelStats = this.add
-      .text(LARGURA_JOGO / 2, ALTURA_JOGO / 2 + 80, textoEstatisticas, {
-        fontFamily: "Orbitron, monospace",
-        fontSize: "18px",
-        color: "#aaaaaa",
-        align: "center",
-        lineSpacing: 8,
-      })
-      .setOrigin(0.5)
-      .setDepth(101)
-      .setAlpha(0)
-      .setScrollFactor(0);
+    // Resetar estilos de animação do placar HTML (se houver)
+    if (this.domHud.scoreboard) {
+      this.domHud.scoreboard.style.top = "";
+      this.domHud.scoreboard.style.transform = "";
+    }
 
-    // Subtexto de comando modificado de ESC para ESPAÇO, já que adicionamos o reset
-    const subtexto = this.add
-      .text(
-        LARGURA_JOGO / 2,
-        ALTURA_JOGO / 2 + 190,
-        "Pressione ESPAÇO para reiniciar ou ESC para sair",
-        {
-          fontFamily: "Outfit, sans-serif",
-          fontSize: "16px",
-          color: "#00ffff",
-        },
-      )
-      .setOrigin(0.5)
-      .setDepth(101)
-      .setAlpha(0)
-      .setScrollFactor(0);
+    // Preparar os dados estruturados para a GameOverScene
+    const payloadGameOver = {
+      status: vencedorEhJ1 ? "VITÓRIA" : "DERROTA",
+      gols: this.vitoriasJ1,
+      contra: this.vitoriasJ2,
+      socos: this.estatisticas.socosConectados,
+      superChutes: this.estatisticas.superChutesDisparados,
+      tempoPoder: Math.round(this.estatisticas.tempoComPoder),
+      ranking: rankingFinal,
+      corVencedor: corVencedorHex,
+      mensagem: mensagem
+    };
 
-    // Animação de fade in em todos os elementos de texto juntos
-    this.tweens.add({
-      targets: [texto, painelStats, subtexto],
-      alpha: 1,
-      delay: 500,
-      duration: 500,
-    });
-
-    // Listener para o ESPAÇO (Reiniciar partida limpando o estado)
-    // Só aceita ESPAÇO após 5 segundos para evitar reinício acidental com cliques rápidos
-    this.time.delayedCall(5000, () => {
-      this.input
-        .keyboard!.addKey(Phaser.Input.Keyboard.KeyCodes.SPACE)
-        .once("down", () => {
-          // Se tiver elementos HTML do placar travados na tela, a gente reseta o CSS deles antes de sair
-          if (this.domHud.scoreboard) {
-            this.domHud.scoreboard.style.top = "";
-            this.domHud.scoreboard.style.transform = "";
-          }
-          this.scene.start("CenaMenu");
-        });
-    });
+    // Abre a CenaGameOver paralelamente por cima desta cena, sem destruí-la (mantém o mapa visível)
+    this.scene.launch("CenaGameOver", payloadGameOver);
   }
 
   private _atualizarProjeteis(dt: number): void {

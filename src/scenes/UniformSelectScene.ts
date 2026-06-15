@@ -17,6 +17,8 @@ export class CenaSelecaoUniforme extends Phaser.Scene {
   private cicloSelecionado: PresetHorario = CICLOS_HORARIO[0];
   private spritePreview!: Phaser.GameObjects.Sprite;
   private spriteOponente!: Phaser.GameObjects.Sprite;
+  private textoJ1!: Phaser.GameObjects.Text;
+  private textoJ2!: Phaser.GameObjects.Text;
   private cartoesUniforme: Phaser.GameObjects.Container[] = [];
   private cartoesCiclo: Phaser.GameObjects.Container[] = [];
   private previewMapa!: Phaser.GameObjects.Container;
@@ -115,22 +117,23 @@ export class CenaSelecaoUniforme extends Phaser.Scene {
     }).setOrigin(0.5);
 
     // Labels J1 / J2
-    this.add.text(previewCX - 110, previewY + 100, 'JOGADOR 1', {
+    this.textoJ1 = this.add.text(previewCX - 110, previewY + 100, 'JOGADOR 1', {
       fontFamily: "'Bangers', cursive", fontSize: '16px', color: '#00ffff', letterSpacing: 2,
     }).setOrigin(0.5);
-    this.add.text(previewCX + 110, previewY + 100, 'CPU / J2', {
+    this.textoJ2 = this.add.text(previewCX + 110, previewY + 100, 'CPU / J2', {
       fontFamily: "'Bangers', cursive", fontSize: '16px', color: '#0C439F', letterSpacing: 2,
     }).setOrigin(0.5);
 
-    // Sprites dos jogadores no preview central
+    // Sprites dos jogadores no preview central (Estáticos)
     this.spritePreview = this.add.sprite(previewCX - 110, previewY - 20, 'p_parado').setScale(0.18).setDepth(10);
-    this._aplicarPipelineUniforme(this.spritePreview, this.uniformeSelecionado);
+    this._aplicarPipelineUniforme(this.spritePreview, UNIFORMES[0]); // Garra sempre na esquerda
     this.spritePreview.play('player_idle');
 
-    const oponente = UNIFORMES.find(u => u.id !== this.uniformeSelecionado.id) || UNIFORMES[1];
     this.spriteOponente = this.add.sprite(previewCX + 110, previewY - 20, 'p_parado').setScale(0.18).setFlipX(true).setDepth(10);
-    this._aplicarPipelineUniforme(this.spriteOponente, oponente);
+    this._aplicarPipelineUniforme(this.spriteOponente, UNIFORMES[1]); // Sangue Futebol sempre na direita
     this.spriteOponente.play('player_idle');
+
+    this._atualizarPreview();
 
     // ── COLUNA DIREITA — Clima ────────────────
     this._desenharSeparador(zonaDir.x, zonaDir.x + zonaDir.larg, 'CONDIÇÃO DO CLIMA', conteudoY);
@@ -279,9 +282,22 @@ export class CenaSelecaoUniforme extends Phaser.Scene {
   }
 
   private _atualizarPreview(): void {
-    this._aplicarPipelineUniforme(this.spritePreview, this.uniformeSelecionado);
-    const oponente = UNIFORMES.find(u => u.id !== this.uniformeSelecionado.id) || UNIFORMES[1];
-    this._aplicarPipelineUniforme(this.spriteOponente, oponente);
+    if (!this.textoJ1 || !this.textoJ2) return;
+
+    const corGarra = `#${UNIFORMES[0].corPrimaria.toString(16).padStart(6, '0')}`;
+    const corSangue = `#${UNIFORMES[1].corPrimaria.toString(16).padStart(6, '0')}`;
+
+    if (this.uniformeSelecionado.id === UNIFORMES[0].id) {
+      this.textoJ1.setX(this.spritePreview.x);
+      this.textoJ1.setColor(corGarra);
+      this.textoJ2.setX(this.spriteOponente.x);
+      this.textoJ2.setColor(corSangue);
+    } else {
+      this.textoJ1.setX(this.spriteOponente.x);
+      this.textoJ1.setColor(corSangue);
+      this.textoJ2.setX(this.spritePreview.x);
+      this.textoJ2.setColor(corGarra);
+    }
   }
 
   private _desenharPreviewMapa(ciclo: PresetHorario): void {
